@@ -1516,12 +1516,12 @@ window.WPDAUTH = {
             '<div><div class="kn" style="font-size:15px;">'+esc(f.name)+' <span style="color:var(--dim); font-size:12px;">'+f.kg+' กก./รอบ</span></div>'+
             '<div class="sumline" style="margin-top:2px;">'+
               (cur
-                ? 'ก้อนที่ใช้อยู่ <b style="color:var(--accent2)">#'+esc(cur)+'</b>'+
-                  (curRow ? ' เหลือ <b style="color:'+(curRow.remaining<=0?'var(--red)':'var(--accent2)')+'">'+curRow.remaining+' กก.</b>'
+                ? 'ก้อนที่ใช้อยู่ <b style="color:var(--accent2)">'+esc(curRow?baleLabel(f.name,curRow):('เบอร์ '+cur))+'</b>'+
+                  (curRow ? ' — เหลือ <b style="color:'+(curRow.remaining<=0?'var(--red)':'var(--accent2)')+'">'+curRow.remaining+' กก.</b>'
                           : ' <span class="bdg warn">ไม่มีเบอร์นี้ในสต๊อก</span>')
                 : '<span class="bdg warn">ยังไม่ได้เลือกเบอร์ก้อน</span>')+
-              ' · ใยนี้เหลือทั้งหมด '+left+' กก.'+
-              (nextLot?' · ก้อนถัดไป #'+esc(nextLot.lot)+' ('+nextLot.remaining+' กก.)'
+              '<br>ใยนี้เหลือทั้งหมด '+left+' กก.'+
+              (nextLot?' · ก้อนถัดไป เบอร์ '+esc(nextLot.lot)+' ('+nextLot.kg+' กก. เหลือ '+nextLot.remaining+' กก.)'
                       :(left>0?'':' <span class="bdg bad">หมดสต๊อก</span>'))+
             '</div></div>'+
             '<button class="btn sec sm" data-bale="'+esc(f.name)+'" style="flex:0 0 auto;">🔄 เปลี่ยนก้อน</button></div>';
@@ -1534,7 +1534,7 @@ window.WPDAUTH = {
           const next=live.filter(l=>String(l.lot)!==String(cur)).sort((a,b)=>a.lot-b.lot)[0];
           const v=await askText('เปลี่ยนก้อนใย — '+name,
             (cur?'ก้อนที่ใช้อยู่: #'+cur+'\n':'')+
-            (live.length?'ก้อนที่ยังมีของในสต๊อก: '+live.map(l=>'#'+l.lot+' ('+l.remaining+' กก.)').join(', ')+'\n':'ไม่มีก้อนที่เหลือของในสต๊อกเลย\n')+
+            (live.length?'ก้อนที่ยังมีของในสต๊อก:\n'+live.map(l=>'  '+baleLabel(name,l)+' — เหลือ '+l.remaining+' กก.').join('\n')+'\n':'ไม่มีก้อนที่เหลือของในสต๊อกเลย\n')+
             '\nพิมพ์เบอร์ก้อนใหม่ที่หยิบมาใช้ — รอบป้อนใยหลังจากนี้จะหักจากก้อนนี้',
             next?String(next.lot):'');
           if(v==null) return;
@@ -1545,7 +1545,8 @@ window.WPDAUTH = {
           if(!hit && !await ask('ไม่มีเบอร์ '+t+' ในสต๊อก','ใย "'+name+'" ไม่มีก้อน/ล็อตเบอร์นี้ในแอพสต๊อก\n\nยืนยันจะใช้เบอร์นี้หรือไม่?')) return;
           o.lotLog=o.lotLog||[];
           o.lotLog.push({ time:localISO(), fiberName:name, from:cur, to:t,
-            toRemaining:hit?r3(hit.remaining):null, orderId:o.id, manual:true });
+            toRemaining:hit?r3(hit.remaining):null, toKg:hit?hit.kg:null, toDate:hit?hit.date:'',
+            orderId:o.id, manual:true });
           f.lot=t;
           await saveOrders(); rFeed(true);
           toast(name+' เปลี่ยนเป็นก้อน #'+t+' แล้ว');
@@ -1555,10 +1556,12 @@ window.WPDAUTH = {
     if($('tLotLog')){
       const ll=(o&&o.lotLog?o.lotLog:[]).slice().reverse().slice(0,40);
       $('tLotLog').innerHTML=ll.length
-        ? '<tr><th>เวลา</th><th>ใย</th><th>เปลี่ยนจาก</th><th>เป็นก้อน</th><th>เหลือในก้อนใหม่</th></tr>'+
+        ? '<tr><th>เวลา</th><th>ใย</th><th>ก้อนเดิม</th><th>เริ่มก้อนใหม่</th><th>รับเข้า</th><th>วันที่รับเข้า</th><th>เหลือในก้อนใหม่</th></tr>'+
           ll.map(x=>'<tr><td>'+(x.time||'').slice(0,16).replace('T',' ')+'</td><td>'+esc(x.fiberName)+'</td>'+
-            '<td>'+(x.from?'ก้อน '+esc(x.from)+' <span class="bdg warn">หมดแล้ว</span>':'<span style="color:var(--dim)">เริ่มใช้ครั้งแรก</span>')+'</td>'+
-            '<td class="kn" style="color:var(--accent2)">ก้อน '+esc(x.to)+'</td>'+
+            '<td>'+(x.from?'เบอร์ '+esc(x.from)+' <span class="bdg warn">หมดแล้ว</span>':'<span style="color:var(--dim)">เริ่มใช้ครั้งแรก</span>')+'</td>'+
+            '<td class="kn" style="color:var(--accent2)">เบอร์ '+esc(x.to)+'</td>'+
+            '<td>'+(x.toKg==null?'—':x.toKg+' กก.')+'</td>'+
+            '<td>'+esc(x.toDate||'—')+'</td>'+
             '<td>'+(x.toRemaining==null?'—':x.toRemaining+' กก.')+'</td></tr>').join('')
         : '<tr><td class="empty">ยังไม่มีการเปลี่ยนก้อน</td></tr>';
     }
@@ -1901,7 +1904,8 @@ window.WPDAUTH = {
       const live=rows.filter(l=>l.remaining>0);
       if(!n){ lotSel.innerHTML='<option value="">— เลือกชื่อใยก่อน —</option>'; lotTxt.style.display='none'; return; }
       lotSel.innerHTML='<option value="">— เลือกเบอร์ก้อนที่ใช้อยู่ —</option>'+
-        live.map(l=>'<option value="'+esc(l.lot)+'">ก้อน/ล็อต '+esc(l.lot)+' — เหลือ '+l.remaining+' กก.</option>').join('')+
+        live.map(l=>'<option value="'+esc(l.lot)+'">เบอร์ '+esc(l.lot)+' · รับเข้า '+l.kg+' กก.'+
+          (l.date?' ('+l.date+')':'')+' · เหลือ '+l.remaining+' กก.</option>').join('')+
         '<option value="__new__">+ พิมพ์เบอร์เอง…</option>';
       const has=live.some(l=>String(l.lot)===String(keep));
       if(keep && has) lotSel.value=String(keep);
@@ -1929,9 +1933,10 @@ window.WPDAUTH = {
       hint.innerHTML='คงเหลือในสต๊อกรวม <b style="color:'+(total<=0?'var(--red)':'var(--accent2)')+'">'+total+' กก.</b>'+
         (balesLeft!=null?' (<b style="color:var(--accent2)">'+balesLeft+' ก้อน</b>)':'')+
         (cur
-          ? ' — ใช้ก้อน/ล็อต <b style="color:var(--accent2)">'+esc(cur)+'</b>'+
-            (curRow ? ' เหลือ '+curRow.remaining+' กก.' : ' <span class="bdg warn">ไม่มีเบอร์นี้ในสต๊อก</span>')
-          : (active?' — ยังไม่ได้เลือกเบอร์ก้อน ระบบจะเริ่มจากล็อต '+esc(active.lotNo)+' ให้เอง':' <span class="bdg bad">ใยหมดสต๊อกแล้ว</span>'))+
+          ? '<br>ใช้ก้อน <b style="color:var(--accent2)">'+esc(baleLabel(n,curRow)||('เบอร์ '+cur))+'</b>'+
+            (curRow ? ' — เหลือ <b style="color:'+(curRow.remaining<=0?'var(--red)':'var(--accent2)')+'">'+curRow.remaining+' กก.</b>'
+                    : ' <span class="bdg warn">ไม่มีเบอร์นี้ในสต๊อก</span>')
+          : (active?' — ยังไม่ได้เลือกเบอร์ก้อน ระบบจะเริ่มจากเบอร์ '+esc(active.lotNo)+' ให้เอง':' <span class="bdg bad">ใยหมดสต๊อกแล้ว</span>'))+
         '<br><span style="color:var(--dim)">ก้อนที่เลือกไว้หมดเมื่อไหร่ ระบบสลับไปก้อนถัดไปของใยชื่อเดียวกันให้เอง แล้วบันทึกไว้ในประวัติ</span>';
     };
     sel.onchange=()=>{
@@ -2473,10 +2478,24 @@ window.WPDAUTH = {
   }
 
   /* ---------- ก้อนใย: แท็กก้อนที่ใช้อยู่ + หักสต๊อกอัตโนมัติทุกรอบป้อน ---------- */
+  /* วันที่แบบที่เขียนบนก้อน เช่น 21/8/2569 */
+  function thDate(iso){
+    const d=String(iso||'').slice(0,10).split('-');
+    if(d.length!==3) return '';
+    return (+d[2])+'/'+(+d[1])+'/'+(+d[0]+543);
+  }
   function fiberLotsNow(name){
     return (STOCKFIBER[name]||[])
-      .map(l=>({lot:l.lotNo, kg:+l.kg||0, remaining:lotRemaining(name,l.lotNo,+l.kg||0)}))
+      .map(l=>({lot:l.lotNo, kg:+l.kg||0, time:l.time, date:thDate(l.time),
+                remaining:lotRemaining(name,l.lotNo,+l.kg||0)}))
       .sort((a,b)=>a.lot-b.lot);
+  }
+  /* ป้ายก้อนแบบเดียวกับที่เขียนไว้บนก้อนจริง: เบอร์ 1 · 7D64HC 265 กก. · 21/8/2569 */
+  function baleLabel(name,l){
+    if(!l) return '';
+    const no=(l.lot!=null?l.lot:l.lotNo);
+    const dt=l.date||thDate(l.time);
+    return 'เบอร์ '+no+' · '+name+' '+(+l.kg||0)+' กก.'+(dt?' · '+dt:'');
   }
   function fiberRemainTotal(name){
     return r3(fiberLotsNow(name).reduce((s,l)=>s+Math.max(0,l.remaining),0));
@@ -2520,9 +2539,9 @@ window.WPDAUTH = {
           const from=f.lot||'';
           f.lot=String(l.lot);
           const line={ time:localISO(), fiberName:f.name, from:from, to:String(l.lot),
-            toRemaining:r3(l.remaining), orderId:o.id };
+            toRemaining:r3(l.remaining), toKg:l.kg, toDate:l.date, orderId:o.id };
           o.lotLog.push(line);
-          switched.push(f.name+': '+(from?'ก้อน '+from+' หมด → ':'เริ่ม ')+'ก้อน '+l.lot);
+          switched.push(f.name+': '+(from?'ก้อน '+from+' หมด → ':'เริ่ม ')+'ก้อน '+l.lot+' ('+l.kg+' กก.)');
         }
         S.wd.push({ id:uid(), time:localISO(), orderId:o.id, seq:String(l.lot),
           fiberName:f.name, lot:l.lot, kg:r3(take), note:'หักอัตโนมัติ (ป้อนใย 1 รอบ)',

@@ -132,14 +132,16 @@
     <div class="panel" id="p-fiber">
       <div class="card"><h3>สต๊อกใย</h3><div id="fiberCards"></div></div>
       <div class="card">
-        <h3>รับเข้าใย (ออกเลขล็อตให้อัตโนมัติ)</h3>
+        <h3>รับเข้าใย — 1 ครั้ง = 1 ก้อน</h3>
+        <p class="sumline" style="margin-top:-4px;">กรอกตามที่เขียนบนก้อน เช่น <b>เบอร์ 1 · 7D64HC · 265 กก. · 21/8/2569</b><br>
+        <span style="color:var(--muted)">ใยชื่อเดียวกันแต่ละก้อนหนักไม่เท่ากันได้ ระบบแยกยอดให้ทีละก้อน</span></p>
         <div class="rf">
           <div><label>ชื่อใย</label><select id="rwSel"></select>
             <input id="rwName" list="dlRwFiber" placeholder="พิมพ์ชื่อใย" style="display:none;"><datalist id="dlRwFiber"></datalist></div>
-          <div><label>น้ำหนักรับเข้า (กก.)</label><input id="rwKg" type="number" inputmode="decimal" step="0.01"></div>
+          <div><label>น้ำหนักก้อนนี้ (กก.)</label><input id="rwKg" type="number" inputmode="decimal" step="0.01" placeholder="เช่น 265"></div>
         </div>
-        <label>จำนวนก้อน (ถ้านับได้ — ไว้ติ๊กออกทีละก้อนตอนใช้)</label><input id="rwBales" type="number" inputmode="numeric" placeholder="เช่น 10">
-        <label>เลขล็อต (ถ้ามีเขียนไว้อยู่แล้ว)</label><input id="rwLotNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ = เรียงเลขให้อัตโนมัติ">
+        <label>ถ้ารับเข้าหลายก้อนพร้อมกันแต่ไม่แยกเบอร์ ใส่จำนวนก้อนตรงนี้ (ปกติเว้นว่าง)</label><input id="rwBales" type="number" inputmode="numeric" placeholder="เว้นว่าง = 1 ก้อน">
+        <label>เบอร์ก้อน — เลขที่เขียนไว้บนก้อน</label><input id="rwLotNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ = ออกเบอร์ถัดไปให้อัตโนมัติ">
         <div class="sumline" id="rwLotPreview"></div>
         <div class="rf">
           <div><label>ผู้ขาย</label><input id="rwSupplier"></div>
@@ -1040,7 +1042,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const customLot=$('rwLotNo').value.trim();
     const lotNo=customLot?+customLot:CALC.nextFiberLot(S.fiberReceipts,n);
     if(customLot && S.fiberReceipts.some(r=>r.fiberName===n && String(r.lotNo)===String(lotNo))){
-      if(!await ask('เลขล็อต '+lotNo+' ('+n+') มีอยู่แล้วในระบบ','ยืนยันจะสร้างล็อตใหม่เลขซ้ำกันหรือไม่? (แนะนำให้เว้นว่างให้ระบบเรียงเลขใหม่แทน)')) return;
+      if(!await ask('เบอร์ก้อน '+lotNo+' ของ '+n+' มีอยู่แล้ว','ระบบจะมีก้อนเบอร์ '+lotNo+' ซ้ำกัน 2 ก้อน ทำให้ยอดคงเหลือดูสับสน\n\nแนะนำให้เว้นว่างไว้ ระบบจะออกเบอร์ถัดไปให้เอง\n\nยืนยันจะใช้เบอร์ซ้ำหรือไม่?')) return;
     }
     const dateVal=$('rwDate').value?$('rwDate').value+'T'+localISO().slice(11):localISO();
     const baleCount=+$('rwBales').value||null;
