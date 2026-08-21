@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="แอพสต๊อก">
+<meta name="theme-color" content="#ff8a3d">
+<title>ระบบสต๊อกสินค้า — วินโพลีดีไซน์</title>
+</head>
+<body>
+<style>
+  #sk, #sk * { box-sizing: border-box; }
+  #sk {
+    --bg:#e6f4ea; --panel:#1a222c; --panel2:#212b37; --border:#2b3645;
+    --accent:#ff8a3d; --accent2:#ffb27a; --text:#f2ede3; --dim:#ffffff;
+    --green:#3fb27f; --red:#e5595f; --yellow:#f0b429; --blue:#5b9bd5;
+    font-family:'Sarabun',sans-serif; background:var(--bg); color:var(--text);
+    min-height:100vh; padding-bottom:78px; position:relative; -webkit-tap-highlight-color:transparent;
+  }
+  #sk h1,#sk h2,#sk h3,#sk .kn { font-family:'Kanit',sans-serif; }
+  #sk .topbar { padding:14px 16px 12px; border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#141b23,#10151c); position:sticky; top:0; z-index:20; }
+  #sk .topbar h1 { font-size:17px; font-weight:600; margin:0 0 2px; display:flex; align-items:center; gap:8px; }
+  #sk .dotled { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); }
+  #sk .sub { font-size:13px; color:#ffffff; font-weight:500; }
+  #sk .savechip { margin-top:7px; font-size:11.5px; padding:5px 10px; border-radius:8px;
+    font-family:'Kanit',sans-serif; display:inline-block; cursor:default; }
+  #sk .savechip.ok { background:#163022; color:var(--green); }
+  #sk .savechip.saving { background:#232e3b; color:#ffffff; }
+  #sk .savechip.bad { background:#3a1c1e; color:var(--red); border:1px solid #5c2a2c; cursor:pointer; }
+  #sk .content { padding:14px; max-width:980px; margin:0 auto; }
+  #sk .panel { display:none; }
+  #sk .panel.show { display:block; }
+  #sk .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:11px; }
+  #sk .card h3 { font-size:13px; color:#ffffff; font-weight:500; margin:0 0 9px; text-transform:uppercase; letter-spacing:.5px; }
+  #sk input,#sk select { width:100%; background:var(--panel2); border:1px solid var(--border);
+    border-radius:8px; padding:9px 10px; color:var(--text); font-family:'Sarabun',sans-serif; font-size:14px; margin-top:4px; }
+  #sk label { font-size:12px; color:#ffffff; display:block; margin-top:9px; }
+  /* มือถือ: ปุ่มและช่องกรอกต้องกดถนัด แม้ใส่ถุงมือหรือมือเปื้อน (มาตรฐาน 44px) */
+  @media (max-width:640px){
+    #sk input,#sk select,#sk textarea { min-height:44px; padding:11px 12px; font-size:16px; }
+    #sk .chkrow input[type="checkbox"], #sk input[type="checkbox"] { min-height:0; width:22px; height:22px; }
+    #sk button.btn { min-height:44px; }
+    #sk button.btn.sm { min-height:40px; }
+    #sk .nb { min-height:52px; }
+    #sk .x, #sk .ed { min-height:40px; min-width:40px; padding:8px 10px; font-size:15px; }
+  }
+
+  #sk button.btn { background:var(--accent); color:#201305; border:none; border-radius:9px; padding:10px 15px;
+    font-family:'Kanit',sans-serif; font-weight:500; font-size:14px; cursor:pointer; margin-top:11px; }
+  #sk button.btn.sec { background:var(--panel2); color:var(--text); border:1px solid var(--border); }
+  #sk button.btn.dg { background:#3a1c1e; color:var(--red); border:1px solid #5c2a2c; }
+  #sk button.btn.blue { background:var(--blue); color:#0a1f33; }
+  #sk button.btn.sm { padding:6px 10px; font-size:12.5px; margin-top:0; }
+  #sk button.btn.w { width:100%; }
+  #sk .rf { display:flex; gap:9px; flex-wrap:wrap; }
+  #sk .rf > div { flex:1; min-width:120px; }
+  #sk table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  #sk th { text-align:left; color:#ffffff; font-weight:500; padding:7px 8px; border-bottom:1px solid var(--border);
+    white-space:nowrap; font-family:'Kanit',sans-serif; }
+  #sk td { padding:7px 8px; border-bottom:1px solid #1f2833; white-space:nowrap; }
+  #sk .scr { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  #sk .bdg { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-family:'Kanit',sans-serif; }
+  #sk .bdg.ok { background:#163022; color:var(--green); }
+  #sk .bdg.warn { background:#3a2a0f; color:var(--yellow); }
+  #sk .bdg.bad { background:#3a1c1e; color:var(--red); }
+  #sk .sg { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  #sk .stat { background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:11px; }
+  #sk .stat .v { font-size:21px; font-family:'Kanit',sans-serif; color:var(--accent2); }
+  #sk .stat .l { font-size:11px; color:#ffffff; margin-top:2px; }
+  #sk .nav { position:fixed; bottom:0; left:0; right:0; background:#141b23; border-top:1px solid var(--border); display:flex; z-index:30; overflow-x:auto; }
+  #sk .nb { flex:1; background:none; border:none; color:#ffffff; padding:8px 2px 7px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; font-family:'Sarabun',sans-serif; min-width:64px; }
+  #sk .nb .ic { font-size:17px; }
+  #sk .nb.on { color:var(--accent); }
+  #sk .empty { color:#ffffff; font-size:12.5px; text-align:center; padding:16px 0; }
+  #sk .sumline { font-size:12.5px; color:#ffffff; margin-top:8px; }
+  #sk .toast { position:fixed; bottom:88px; left:50%; transform:translateX(-50%) translateY(12px);
+    background:#243040; border:1px solid var(--accent); color:var(--text); padding:10px 16px; border-radius:10px;
+    font-size:13px; font-family:'Kanit',sans-serif; z-index:200; opacity:0; transition:.22s; pointer-events:none;
+    max-width:90vw; text-align:center; }
+  #sk .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #sk .scard { background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:8px; }
+  #sk .scard .nm { font-family:'Kanit',sans-serif; font-size:15px; }
+  #sk .scard .n { font-size:24px; font-family:'Kanit',sans-serif; color:var(--accent2); margin-top:4px; }
+  #sk .scard .l { font-size:11px; color:#ffffff; }
+  #sk .lowstock { border-color:var(--red); box-shadow:0 0 0 1px var(--red) inset; }
+  #sk .frow { display:flex; gap:6px; margin-top:6px; align-items:center; }
+  #sk .frow input { margin-top:0; }
+  #sk .x { background:none; border:none; color:var(--red); cursor:pointer; font-size:15px; padding:2px 6px; }
+  #sk .ed { background:none; border:none; color:var(--blue); cursor:pointer; font-size:12px; padding:2px 6px; }
+  #sk .cartrow { background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px; }
+  #sk .chkrow { display:inline-flex; align-items:center; gap:4px; background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:5px 9px; margin:3px; font-size:12.5px; }
+  #sk .chkrow input { width:auto; margin:0; }
+  #sk .printbill { display:none; }
+  @media print {
+    body * { visibility:hidden; }
+    #sk .printbill, #sk .printbill * { visibility:visible; }
+    #sk .printbill { display:block; position:absolute; top:0; left:0; width:100%; color:#000; background:#fff; padding:20px; }
+    #sk .printbill table { border-collapse:collapse; width:100%; }
+    #sk .printbill th, #sk .printbill td { border:1px solid #333; padding:5px 8px; font-size:12.5px; }
+    #sk .billsheet { margin-bottom:20px; }
+    #sk .billhead { display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:8px; }
+    #sk .billtitle { font-size:18px; font-weight:700; }
+    #sk .billco { font-size:14px; font-weight:600; }
+    #sk .billdate { font-size:13px; }
+    #sk .billmeta { display:flex; flex-wrap:wrap; gap:14px; font-size:13px; margin-bottom:10px; }
+    #sk .billgrid th { background:#eee; }
+    #sk .billsum td { background:#f5f5f5; font-weight:600; text-align:left; }
+    #sk .billtotal { margin-top:8px; font-size:14px; text-align:right; }
+  }
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+
+<div id="sk">
+  <div class="topbar">
+    <h1><span class="dotled"></span> ระบบสต๊อกสินค้า</h1>
+    <div class="sub" id="clock" style="color:#ffffff;">—</div>
+    <div class="savechip ok" id="saveState">บันทึกแล้ว ✓</div>
+    <div class="sumline" style="margin-top:6px;">เชื่อมกับระบบผลิตอัตโนมัติ — เบิกใย/ผลิตแพ็ค/ท้ายไลน์ หักสต๊อกให้เองทุกจุด</div>
+  </div>
+
+  <div class="content">
+
+    <!-- 1. FIBER -->
+    <div class="panel" id="p-fiber">
+      <div class="card"><h3>สต๊อกใย</h3><div id="fiberCards"></div></div>
+      <div class="card">
+        <h3>รับเข้าใย (ออกเลขล็อตให้อัตโนมัติ)</h3>
+        <div class="rf">
+          <div><label>ชื่อใย</label><select id="rwSel"></select>
+            <input id="rwName" list="dlRwFiber" placeholder="พิมพ์ชื่อใย" style="display:none;"><datalist id="dlRwFiber"></datalist></div>
+          <div><label>น้ำหนักรับเข้า (กก.)</label><input id="rwKg" type="number" inputmode="decimal" step="0.01"></div>
+        </div>
+        <label>จำนวนก้อน (ถ้านับได้ — ไว้ติ๊กออกทีละก้อนตอนใช้)</label><input id="rwBales" type="number" inputmode="numeric" placeholder="เช่น 10">
+        <label>เลขล็อต (ถ้ามีเขียนไว้อยู่แล้ว)</label><input id="rwLotNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ = เรียงเลขให้อัตโนมัติ">
+        <div class="sumline" id="rwLotPreview"></div>
+        <div class="rf">
+          <div><label>ผู้ขาย</label><input id="rwSupplier"></div>
+          <div><label>หมายเหตุ</label><input id="rwNote"></div>
+        </div>
+        <label>วันที่รับเข้า</label><input id="rwDate" type="date">
+        <button class="btn w" id="btnRw">บันทึกรับเข้าใย</button>
+      </div>
+      <div class="card">
+        <h3>ตั้งจุดเตือนสต๊อกต่ำ (ใย)</h3>
+        <div class="rf">
+          <div><label>ชื่อใย</label><select id="thSel"></select></div>
+          <div><label>เตือนเมื่อต่ำกว่า (กก.)</label><input id="thKg" type="number" inputmode="decimal" step="0.1"></div>
+        </div>
+        <button class="btn sec w" id="btnTh">บันทึก</button>
+      </div>
+      <div class="card"><h3>คงเหลือแยกตามลอต</h3><div class="sumline" id="fiberLotFilterBar"></div>
+        <div class="scr"><table id="tFiberLots"></table></div></div>
+      <div class="card"><h3>ประวัติรับเข้าใย</h3><div class="scr"><table id="tRw"></table></div></div>
+      <div class="card"><h3>ประวัติเบิกใย (จากระบบผลิต — เลือกลอตจริงเท่านั้น)</h3><div class="scr"><table id="tRwUse"></table></div></div>
+    </div>
+
+    <!-- 2. FABRIC -->
+    <div class="panel" id="p-fabric">
+      <div class="card"><h3>ม้วนผ้าที่ยังไม่ตัด</h3><div id="rollCards"></div></div>
+      <div class="card">
+        <h3>รับเข้าม้วนผ้า (ออกเลขให้แต่ละม้วนทันที)</h3>
+        <div class="rf">
+          <div><label>ชนิดผ้า</label><select id="fabRecSel"></select>
+            <input id="fabRecName" list="dlFabric" placeholder="พิมพ์ชนิดผ้า" style="display:none;"><datalist id="dlFabric"></datalist></div>
+          <div><label>จำนวนม้วนที่รับเข้า</label><input id="fabRecRolls" type="number" inputmode="numeric"></div>
+        </div>
+        <div class="rf">
+          <div><label>หน้ากว้าง (นิ้ว — ถ้ารู้)</label><input id="fabRecWidth" type="number" inputmode="decimal" step="0.1" placeholder="เช่น 59"></div>
+          <div><label>ความยาว/ม้วน (นิ้ว — ถ้ารู้)</label><input id="fabRecLength" type="number" inputmode="decimal" step="0.1" placeholder="เช่น 3937"></div>
+        </div>
+        <p class="sumline">ใส่หน้ากว้าง+ความยาวไว้ จะช่วยให้รู้ว่าตัดแล้วเหลือกี่เมตร และคำนวณต้นทุนต่อชิ้นตามพื้นที่จริงในแอพต้นทุนได้แม่นขึ้น (ไม่ใส่ก็ใช้งานได้ปกติ)</p>
+        <div class="sumline" id="fabRecPreview"></div>
+        <label>เลขม้วนเริ่มต้น (ถ้ามีเขียนไว้อยู่แล้ว)</label><input id="fabRecRollNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ = เรียงเลขให้อัตโนมัติ">
+        <label>วันที่รับเข้า</label><input id="fabRecDate" type="date">
+        <label>หมายเหตุ</label><input id="fabRecNote">
+        <button class="btn w" id="btnFabRec">บันทึกรับเข้าม้วนผ้า</button>
+      </div>
+      <div class="card">
+        <h3>บันทึกการตัดผ้า</h3>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:0;">
+          <input type="checkbox" id="cutFreeMode" style="width:auto; margin:0;">
+          <span style="font-size:13px; color:var(--text);">กรอกอิสระ (ลงของเก่าที่ไม่มีม้วนอ้างอิง)</span>
+        </label>
+        <div class="rf" id="cutBatchModeRow">
+          <div><label>ชนิดผ้า</label><select id="cutFabSel"></select></div>
+          <div><label>ม้วนที่ (เลือกจากม้วนที่ยังไม่ถูกใช้)</label><select id="cutRollSel"></select></div>
+        </div>
+        <div class="rf" id="cutFreeModeRow" style="display:none;">
+          <div><label>ชนิดผ้า</label><select id="cutFreeFabSel"></select>
+            <input id="cutFreeFabName" list="dlCutFreeFab" placeholder="พิมพ์ชนิดผ้า" style="display:none;"><datalist id="dlCutFreeFab"></datalist></div>
+          <div><label>ม้วนที่ (ถ้ารู้ — ไม่บังคับ)</label><input id="cutFreeRollNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ก็ได้"></div>
+        </div>
+        <label>ตัดได้ไซซ์ไหนบ้าง — กี่ชิ้น (ไซซ์เป็น ซม. ถ้าเป็นนิ้วให้พิมพ์ต่อท้ายว่า นิ้ว)</label>
+        <div id="cutRows"></div>
+        <button class="btn sec sm" style="margin-top:8px;" id="btnAddCutRow">+ เพิ่มไซซ์</button><br>
+        <label>เลขถุงเริ่มต้น (ถ้ามีเขียนไว้อยู่แล้ว — ใช้ตอนกรอกอิสระเท่านั้น)</label><input id="cutFreeBatchNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ = เรียงเลขให้อัตโนมัติ">
+        <label>หมายเหตุ</label><input id="cutNote">
+        <button class="btn w" id="btnCut">บันทึกการตัด</button>
+      </div>
+      <div class="card">
+        <h3>สถานะม้วนผ้าทั้งหมด</h3>
+        <div class="scr"><table id="tRollStatus"></table></div>
+      </div>
+      <div class="card">
+        <h3>สต๊อกผ้า แยกตามชนิด+ไซซ์</h3>
+        <div class="scr"><table id="tCutStock"></table></div>
+      </div>
+      <div class="card">
+        <h3>ส่งเย็บ</h3>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:0;">
+          <input type="checkbox" id="sewFreeMode" style="width:auto; margin:0;">
+          <span style="font-size:13px; color:var(--text);">กรอกอิสระ (ลงของเก่าที่ไม่มีถุงตัดอ้างอิง)</span>
+        </label>
+        <div class="rf" id="sewBatchModeRow">
+          <div><label>ชนิดผ้า</label><select id="sewFabSel"></select></div>
+          <div><label>ไซซ์</label><select id="sewSizeSel"></select></div>
+        </div>
+        <label id="sewBatchSelLabel">เลือกถุงตัดที่จะส่ง</label><select id="sewBatchSel"></select>
+        <div class="rf" id="sewFreeModeRow" style="display:none;">
+          <div><label>ชนิดผ้า</label><select id="sewFreeFabSel"></select>
+            <input id="sewFreeFabName" list="dlSewFreeFab" placeholder="พิมพ์ชนิดผ้า" style="display:none;"><datalist id="dlSewFreeFab"></datalist></div>
+        </div>
+        <div id="sewFreeRowsWrap" style="display:none;">
+          <label>ไซซ์ (ซม.) — กี่ชิ้น (เพิ่มได้หลายไซซ์)</label>
+          <div id="sewFreeRows"></div>
+          <button class="btn sec sm" style="margin-top:6px;" id="btnAddSewFreeRow">+ เพิ่มไซซ์</button>
+        </div>
+        <div class="rf" id="sewFreeBatchRow" style="display:none;">
+          <div><label>เลขถุงเริ่มต้น (ถ้ามีเขียนไว้อยู่แล้ว)</label><input id="sewFreeBatchNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ = เรียงเลขให้อัตโนมัติ"></div>
+        </div>
+        <label>ประเภทสินค้า (เช่น หมอนข้าง หมอนหนุน ปิกนิก)</label>
+        <select id="sewTypeSel"></select>
+        <input id="sewTypeName" list="dlProdType" placeholder="พิมพ์ประเภทใหม่" style="display:none;"><datalist id="dlProdType"></datalist>
+        <div class="rf" id="sewQtyRow">
+          <div><label>จำนวนที่ส่งเย็บ (ชิ้น)</label><input id="sewQty" type="number" inputmode="numeric"></div>
+        </div>
+        <label>ชื่อผู้เย็บ</label><select id="sewNameSel"></select>
+        <input id="sewName" list="dlSewerName" placeholder="พิมพ์ชื่อใหม่" style="display:none;"><datalist id="dlSewerName"></datalist>
+        <label>เวลาที่ส่ง</label><input id="sewTime" type="datetime-local">
+        <label>หมายเหตุ</label><input id="sewNote">
+        <button class="btn w" id="btnSew">บันทึกส่งเย็บ</button>
+      </div>
+      <div class="card">
+        <h3>รับกลับจากเย็บ (กลับมาเป็นปลอก)</h3>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:0;">
+          <input type="checkbox" id="retFreeMode" style="width:auto; margin:0;">
+          <span style="font-size:13px; color:var(--text);">กรอกอิสระ (ลงของเก่าที่ไม่มีถุงตัดอ้างอิง)</span>
+        </label>
+        <div class="rf" id="retBatchModeRow">
+          <div><label>ชนิดผ้า</label><select id="retFabSel"></select></div>
+          <div><label>ไซซ์</label><select id="retSizeSel"></select></div>
+        </div>
+        <label id="retBatchSelLabel">เลือกถุงตัดที่จะรับกลับ</label><select id="retBatchSel"></select>
+        <div class="rf" id="retFreeModeRow" style="display:none;">
+          <div><label>ชนิดผ้า</label><select id="retFreeFabSel"></select>
+            <input id="retFreeFabName" list="dlRetFreeFab" placeholder="พิมพ์ชนิดผ้า" style="display:none;"><datalist id="dlRetFreeFab"></datalist></div>
+        </div>
+        <div id="retFreeRowsWrap" style="display:none;">
+          <label>ไซซ์ (ซม.) — กี่ชิ้น (เพิ่มได้หลายไซซ์)</label>
+          <div id="retFreeRows"></div>
+          <button class="btn sec sm" style="margin-top:6px;" id="btnAddRetFreeRow">+ เพิ่มไซซ์</button>
+        </div>
+        <div class="rf" id="retFreeBatchRow" style="display:none;">
+          <div><label>เลขถุงเริ่มต้น (ถ้ามีเขียนไว้อยู่แล้ว)</label><input id="retFreeBatchNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ = เรียงเลขให้อัตโนมัติ"></div>
+        </div>
+        <label>ประเภทสินค้า (เช่น หมอนข้าง หมอนหนุน ปิกนิก)</label>
+        <select id="retTypeSel"></select>
+        <input id="retTypeName" list="dlProdType" placeholder="พิมพ์ประเภทใหม่" style="display:none;">
+        <div class="rf" id="retQtyRow">
+          <div><label>รับมากี่ชิ้น</label><input id="retQty" type="number" inputmode="numeric"></div>
+        </div>
+        <label>ชื่อผู้เย็บ</label><select id="retNameSel"></select>
+        <input id="retName" list="dlSewerName" placeholder="พิมพ์ชื่อใหม่" style="display:none;">
+        <label>วันที่รับกลับ</label><input id="retDate" type="date">
+        <label>หมายเหตุ</label><input id="retNote">
+        <button class="btn w" id="btnRet">บันทึกรับกลับจากเย็บ</button>
+      </div>
+      <div class="card">
+        <h3>สถานะถุงบรรจุผ้าทั้งหมด</h3>
+        <p class="sumline">การเบิกถุงไปผลิตทำที่แอพผลิต (หน้าท้ายไลน์ → เบิกถุงบรรจุผ้า) หน้านี้แสดงสถานะให้ดูอย่างเดียว</p>
+        <div class="scr"><table id="tBatchStatus"></table></div>
+      </div>
+      <div class="card">
+        <h3>บันทึกของเสีย (ผ้าเปื้อน ฯลฯ)</h3>
+        <div class="rf">
+          <div><label>ชนิดผ้า</label><select id="wasteFabSel"></select></div>
+          <div><label>หน่วย</label><select id="wasteUnit"><option value="roll">ม้วน</option><option value="piece">ชิ้น</option></select></div>
+        </div>
+        <div class="rf">
+          <div><label>จำนวน</label><input id="wasteQty" type="number" inputmode="numeric"></div>
+          <div><label>สาเหตุ</label><input id="wasteReason" placeholder="เช่น ผ้าเปื้อน"></div>
+        </div>
+        <button class="btn sec w" id="btnWaste">บันทึกของเสีย</button>
+        <div class="scr" style="margin-top:9px;"><table id="tWaste"></table></div>
+      </div>
+      <div class="card"><h3>ประวัติการตัด</h3><div class="scr"><table id="tCutHist"></table></div></div>
+      <div class="card">
+        <h3>ตามประเภทสินค้า</h3>
+        <div class="sumline" id="prodTypeFilterBar"></div>
+        <div id="prodTypeCards"></div>
+        <div id="prodTypeDetail" style="margin-top:10px;"></div>
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border);">
+          <label style="font-size:12px; color:#ffffff;">ตั้งจุดเตือนสต๊อกต่ำ (ต่อประเภทสินค้า)</label>
+          <div class="rf">
+            <div><select id="prodTypeThSel"></select></div>
+            <div><input id="prodTypeThQty" type="number" inputmode="numeric" placeholder="เตือนเมื่อต่ำกว่า (ชิ้น)"></div>
+          </div>
+          <button class="btn sec sm" style="margin-top:6px;" id="btnProdTypeTh">บันทึกจุดเตือน</button>
+          <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border);">
+            <label style="font-size:12px; color:#ffffff;">แก้ไขชื่อประเภทสินค้า (เปลี่ยนแล้วข้อมูลเก่าย้ายตามทั้งหมด)</label>
+            <div class="rf">
+              <div><select id="prodTypeRenameSel"></select></div>
+              <div><button class="btn sec sm" id="btnProdTypeRename">✎ แก้ไขชื่อประเภท</button></div>
+            </div>
+          </div>
+          <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border);">
+            <label style="font-size:12px; color:#ffffff;">แก้ไขชื่อชนิดผ้า — พิมพ์ผิดหรือมีชื่อซ้ำ แก้ให้เป็นชื่อเดียวกันได้</label>
+            <div class="rf">
+              <div><select id="fabTypeRenameSel"></select></div>
+              <div><button class="btn sec sm" id="btnFabTypeRename">✎ แก้ไขชื่อผ้า</button></div>
+            </div>
+            <label style="font-size:12px; color:#ffffff; margin-top:10px;">แก้ไขไซซ์ — เช่น 18x28 กับ 18*28 ให้รวมเป็นอันเดียว</label>
+            <div class="rf">
+              <div><select id="fabSizeRenameSel"></select></div>
+              <div><button class="btn sec sm" id="btnFabSizeRename">✎ แก้ไขไซซ์</button></div>
+            </div>
+            <div class="sumline" id="fabDupWarn" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card"><h3>ประวัติส่งเย็บ</h3><div class="scr"><table id="tSewHist"></table></div></div>
+      <div class="card"><h3>ประวัติรับกลับจากเย็บ</h3><div class="scr"><table id="tRetHist"></table></div></div>
+      <div class="card"><h3>ประวัติเบิกถุงบรรจุผ้า (จากแอพผลิต)</h3><div class="scr"><table id="tFabWdHist"></table></div></div>
+    </div>
+
+    <!-- 3. BAGS -->
+    <div class="panel" id="p-bag">
+      <div class="card"><h3>สต๊อกถุง (รวมทุกกระสอบ)</h3><div id="zipCards"></div><div id="packCards" style="margin-top:9px;"></div></div>
+      <div class="card">
+        <h3>รับเข้ากระสอบถุง (ออกเลขกระสอบให้อัตโนมัติ)</h3>
+        <div class="rf">
+          <div><label>ประเภท</label><select id="bagKind"><option value="zip">ถุงซิล</option><option value="pack">ถุงแพ็ค</option></select></div>
+          <div><label>ชื่อ/แบรนด์ถุง</label><select id="bagNameSel"></select>
+            <input id="bagNameNew" placeholder="พิมพ์ชื่อใหม่" style="display:none;"></div>
+        </div>
+        <div class="rf">
+          <div><label>ไซซ์ถุง</label><input id="bagSize" placeholder="เช่น 40x70"></div>
+          <div><label>น้ำหนักกระสอบ (กก.)</label><input id="bagSackKg" type="number" inputmode="decimal" step="0.1" value="25"></div>
+        </div>
+        <label>น้ำหนักต่อใบ (กก.) — ใช้แปลงเป็นจำนวนใบให้อัตโนมัติ</label>
+        <input id="bagWeightPer" type="number" inputmode="decimal" step="0.001" placeholder="เช่น 0.05">
+        <label>เลขกระสอบ (ถ้ามีเขียนไว้อยู่แล้ว)</label><input id="bagSackNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ = เรียงเลขให้อัตโนมัติ">
+        <div class="sumline" id="bagSackPreview"></div>
+        <label>วันที่รับเข้า</label><input id="bagDate" type="date">
+        <label>หมายเหตุ</label><input id="bagNote">
+        <button class="btn w" id="btnBag">บันทึกรับเข้ากระสอบ</button>
+      </div>
+      <div class="sumline" style="margin:6px 0 0;">ชื่อถุงที่ใช้ต่อออเดอร์อ่านมาจากหน้าตั้งค่า Standard ในแอพผลิตโดยตรง — การเบิกกระสอบไปใช้ ทำที่แอพผลิต (หน้าท้ายไลน์ → เบิกกระสอบถุง)</div>
+      <div class="card"><h3>สถานะกระสอบทั้งหมด</h3><div class="scr"><table id="tSackStatus"></table></div></div>
+      <div class="card"><h3>ประวัติรับเข้ากระสอบ</h3><div class="scr"><table id="tBagHist"></table></div></div>
+      <div class="card"><h3>ประวัติเบิกกระสอบ (จากแอพผลิต)</h3><div class="scr"><table id="tBagWdHist"></table></div></div>
+    </div>
+
+    <!-- 3b. GAS -->
+    <div class="panel" id="p-gas">
+      <div class="card"><h3>สต๊อกถังแก๊ส (โรง 1 — ใยแผ่น)</h3><div class="sg" id="gasStats"></div></div>
+      <div class="card">
+        <h3>รับเข้าถังแก๊ส (ออกเลขถังให้อัตโนมัติ)</h3>
+        <p class="sumline">สั่งเข้าทีละ 10 ถังตามปกติ แก้จำนวนได้ถ้าไม่ครบ</p>
+        <label>จำนวนถังที่รับเข้า</label><input id="gasQty" type="number" inputmode="numeric" value="10">
+        <label>วันที่รับเข้า</label><input id="gasDate" type="date">
+        <label>หมายเหตุ</label><input id="gasNote">
+        <button class="btn w" id="btnGasReceive">บันทึกรับเข้าถังแก๊ส</button>
+      </div>
+      <div class="sumline" style="margin:6px 0 0;">การเปลี่ยนถังใช้งาน ทำที่แอพผลิต (หน้าป้อนใย → เปลี่ยนถังแก๊ส) — ไม่ผูกกับออเดอร์ใดออเดอร์หนึ่ง เพราะแก๊สใช้ต่อเนื่องทั้งไลน์</div>
+      <div class="card"><h3>สถานะถังแก๊สทั้งหมด</h3><div class="scr"><table id="tGasStatus"></table></div></div>
+      <div class="card"><h3>ประวัติเปลี่ยนถัง (จากแอพผลิต)</h3><div class="scr"><table id="tGasSwapHist"></table></div></div>
+    </div>
+
+    <!-- 4. FINISHED GOODS -->
+    <div class="panel" id="p-fin">
+      <div class="card"><h3>สต๊อกสินค้าสำเร็จรูป</h3><div id="finCards"></div></div>
+      <div class="card">
+        <h3>📋 ยอดยกมา (สินค้าสำเร็จรูป) — ลงของเดิมที่มีอยู่แล้ว</h3>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:0;">
+          <input type="checkbox" id="finFreeMode" style="width:auto; margin:0;">
+          <span style="font-size:13px; color:var(--text);">กรอกอิสระ (สินค้าที่ยังไม่มีออเดอร์ในระบบแอพผลิต)</span>
+        </label>
+        <div id="finOrderModeRow">
+          <label>เลือกออเดอร์</label><select id="obFinSel"></select>
+        </div>
+        <div class="rf" id="finFreeModeRow" style="display:none;">
+          <div><label>ลูกค้า</label><select id="finFreeCustSel"></select>
+            <input id="finFreeCustName" list="dlFinFreeCust" placeholder="พิมพ์ชื่อลูกค้า" style="display:none;"><datalist id="dlFinFreeCust"></datalist></div>
+          <div><label>รหัส/ชื่อสินค้า</label><input id="finFreeCode" placeholder="เช่น หมอนใบใหญ่"></div>
+        </div>
+        <label id="finFreeLotLabel" style="display:none;">เลขอ้างอิง/ล็อต (ถ้ามีเขียนไว้อยู่แล้ว)</label>
+        <input id="finFreeLot" placeholder="ไม่บังคับ ไว้ตามรอยย้อนหลัง" style="display:none;">
+        <label id="obFinQtyLabel">จำนวนแพ็คที่มีอยู่จริงตอนนี้</label><input id="obFinQty" type="number" inputmode="numeric">
+        <label id="finFreeDateLabel" style="display:none;">วันที่มีของอยู่แล้ว</label><input id="finFreeDate" type="date" style="display:none;">
+        <button class="btn sec w" id="btnObFin">บันทึกยอดยกมา</button>
+      </div>
+      <div class="card"><h3>ประวัติผลิตเข้าสต๊อก (จากระบบผลิต)</h3><div class="scr"><table id="tFinIn"></table></div></div>
+      <div class="card"><h3>ประวัติการปรับยอด</h3><div class="scr"><table id="tFinAdj"></table></div></div>
+    </div>
+
+    <!-- 5. DISPATCH -->
+    <div class="panel" id="p-ship">
+      <div class="card">
+        <h3>สร้างเที่ยวรถจัดส่ง</h3>
+        <div class="rf">
+          <div><label>วันที่จัดส่ง</label><input id="dpDate" type="date"></div>
+          <div><label>ทะเบียนรถ/คนขับ</label><input id="dpTruck" placeholder="เช่น กข-1234 หรือชื่อคนขับ"></div>
+        </div>
+        <label>เลข PO ลูกค้า</label><input id="dpPO" placeholder="เลข PO ของลูกค้า (ถ้ามี)">
+        <h3 style="margin-top:14px;">รายการสินค้าในเที่ยวนี้</h3>
+        <div id="dpItems"></div>
+        <div class="rf" style="margin-top:8px;">
+          <div><label>เพิ่มออเดอร์</label><select id="dpOrdSel"></select></div>
+          <div><label>วันที่ผลิต (ไม่ระบุ = อัตโนมัติ FIFO)</label><select id="dpDateSel"><option value="">— อัตโนมัติ (FIFO) —</option></select></div>
+        </div>
+        <div class="rf">
+          <div><label>จำนวน (แพ็ค)</label><input id="dpQty" type="number" inputmode="numeric"></div>
+        </div>
+        <button class="btn sec w" id="btnAddDpItem">+ เพิ่มลงเที่ยวรถ</button>
+        <button class="btn w" id="btnSaveDelivery">บันทึกเที่ยวรถ &amp; ออกบิล</button>
+      </div>
+      <div class="card"><h3>ประวัติเที่ยวรถ</h3><div id="dpHistory"></div></div>
+    </div>
+
+    <!-- 6. SUMMARY / EXPORT -->
+    <div class="panel" id="p-sum">
+      <div class="card"><h3>ภาพรวมสต๊อกทั้งหมด</h3><div class="sg" id="sumStats"></div></div>
+      <div class="card"><h3>⚠ ใกล้หมด</h3><div class="scr"><table id="tLow"></table></div></div>
+      <div class="card">
+        <h3>ออกไฟล์ข้อมูล (Excel/CSV)</h3>
+        <div class="rf">
+          <div><label>ตั้งแต่วันที่</label><input id="exFrom" type="date"></div>
+          <div><label>ถึงวันที่</label><input id="exTo" type="date"></div>
+        </div>
+        <button class="btn w" id="btnExport">⤓ ออกไฟล์ตามช่วงวันที่</button>
+        <button class="btn sec w" id="btnExportAll">⤓ ออกทั้งหมด (สำรองข้อมูล)</button>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--red);">โซนอันตราย — โหมดทดสอบ</h3>
+        <p class="sumline">ล้างข้อมูลสต๊อกทั้งหมด (ใย/ผ้า/ถุง/สินค้า/จัดส่ง) เพื่อเริ่มทดลองใช้ใหม่ — ไม่กระทบข้อมูลในแอพผลิต</p>
+        <button class="btn dg w" id="btnClearAll">🗑 ล้างข้อมูลสต๊อกทั้งหมด</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="nav">
+    <button class="nb on" data-p="fiber"><span class="ic">🧵</span>ใย</button>
+    <button class="nb" data-p="fabric"><span class="ic">🧶</span>ผ้า</button>
+    <button class="nb" data-p="bag"><span class="ic">🛍️</span>ถุง</button>
+    <button class="nb" data-p="gas"><span class="ic">🔥</span>แก๊ส</button>
+    <button class="nb" data-p="fin"><span class="ic">📦</span>สินค้า</button>
+    <button class="nb" data-p="ship"><span class="ic">🚚</span>จัดส่ง</button>
+    <button class="nb" data-p="sum"><span class="ic">📊</span>สรุป</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="printbill" id="printBill"></div>
+</div>
+
+<script>
+/* ═══════════════ WPD PATCH 2569-08-20 (ส่วนเสริม ไม่ได้แก้ของเดิม) ═══════════════ */
+/* ก. <select> ต้องจำค่าที่เลือกไว้ ถึงจะสร้าง option ใหม่กี่รอบก็ตาม */
+(function(){try{
+  var d=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');
+  if(!d||!d.set) return;
+  Object.defineProperty(HTMLSelectElement.prototype,'innerHTML',{configurable:true,
+    get:function(){return d.get.call(this);},
+    set:function(v){var prev=this.value; d.set.call(this,v);
+      if(prev!==''&&prev!=null){for(var i=0;i<this.options.length;i++){if(this.options[i].value===prev){this.value=prev;break;}}}
+    }});
+}catch(e){}})();
+/* ข. ป้าย "กำลังบันทึก…" + กันกดปุ่มซ้ำจนบันทึกซ้อน */
+(function(){try{
+  var inflight=0, badge=null, guarded=null;
+  function ui(){
+    if(!badge){badge=document.createElement('div');
+      badge.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:99999;background:#ff8a3d;color:#12181f;font:600 14px Sarabun,sans-serif;padding:9px 20px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.45);display:none';
+      badge.textContent='กำลังบันทึก…';document.body.appendChild(badge);}
+    badge.style.display=inflight>0?'block':'none';
+    if(guarded){ if(inflight>0){guarded.setAttribute('data-busy','1');guarded.style.opacity='0.5';guarded.style.pointerEvents='none';}
+      else {guarded.removeAttribute('data-busy');guarded.style.opacity='';guarded.style.pointerEvents='';guarded=null;} }
+  }
+  document.addEventListener('click',function(ev){
+    var b=ev.target&&ev.target.closest?ev.target.closest('button'):null;
+    if(!b) return;
+    if(b.getAttribute('data-busy')==='1'){ev.stopImmediatePropagation();ev.preventDefault();return;}
+    if(b.getAttribute('data-noguard')==='1') return;
+    guarded=b;
+  },true);
+  var of=window.fetch;
+  window.fetch=function(){
+    var m=(arguments[1]&&arguments[1].method||'GET').toUpperCase();
+    if(m==='GET'||m==='HEAD') return of.apply(this,arguments);
+    inflight++; ui();
+    return of.apply(this,arguments).finally(function(){inflight--; if(inflight<0)inflight=0; ui();});
+  };
+}catch(e){}})();
+/* ค. กันกรอกปีผิดในช่องวันที่ (เช่น 0069 หรือเผลอกรอก พ.ศ.) */
+(function(){try{
+  function yearOf(v){ var m=String(v||'').match(/^(\d{4})-/); return m?+m[1]:null; }
+  document.addEventListener('change',function(ev){
+    var el=ev.target; if(!el||el.tagName!=='INPUT') return;
+    if(el.type!=='date'&&el.type!=='datetime-local') return;
+    var y=yearOf(el.value); if(y==null||(y>=2015&&y<=2100)) return;
+    var fix=null;
+    if(y>=2558&&y<=2643) fix=String(y-543)+String(el.value).slice(4);
+    var msg='ปี '+y+' ไม่น่าถูกต้อง'+(fix?('\n\nระบบเปลี่ยนเป็น ค.ศ. '+(y-543)+' ให้แล้ว'):('\n\nช่องนี้ใช้ปี ค.ศ. เช่น '+(new Date().getFullYear())));
+    el.value = fix ? fix : '';
+    try{
+      var t=document.getElementById('__wpdDateWarn');
+      if(!t){ t=document.createElement('div'); t.id='__wpdDateWarn';
+        t.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:110px;z-index:99999;background:#e5595f;color:#fff;font:600 14px/1.5 Sarabun,sans-serif;padding:10px 16px;border-radius:12px;max-width:88%;white-space:pre-line;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.45)';
+        document.body.appendChild(t); }
+      t.textContent=msg; t.style.display='block';
+      clearTimeout(t.__tm); t.__tm=setTimeout(function(){ t.style.display='none'; },5000);
+    }catch(e){}
+  },true);
+}catch(e){}})();
+</script>
+<script>
+/* ==========================================================================
+   SUPABASE STORAGE SHIM — ใช้โปรเจกต์เดียวกับระบบผลิต ข้อมูลจึงเชื่อมกันอัตโนมัติ
+   ========================================================================== */
+const SUPABASE_URL = 'https://tekhjdnbfncfvpwejlni.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRla2hqZG5iZm5jZnZwd2VqbG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NjgzNDIsImV4cCI6MjEwMTU0NDM0Mn0.bOO7i_NyD-noFzyPjs22R0M2wGlUznViV-_YjOTqbak';
+(function setupSupabaseStorage(){
+  const needsSetup = SUPABASE_URL.includes('YOUR-PROJECT-REF') || SUPABASE_ANON_KEY.includes('YOUR-ANON-PUBLIC-KEY');
+  const base = SUPABASE_URL.replace(/\/$/,'') + '/rest/v1/kv_store';
+  const headers = () => ({ 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' });
+  async function get(key){
+    const r = await fetch(base + '?id=eq.' + encodeURIComponent(key) + '&select=value', { headers: headers() });
+    if (!r.ok) throw new Error('Supabase get failed: HTTP ' + r.status + ' ' + (await r.text()).slice(0,150));
+    const rows = await r.json();
+    if (!rows.length) return null;
+    return { key: key, value: rows[0].value, shared: true };
+  }
+  async function set(key, value){
+    const r = await fetch(base, { method: 'POST',
+      headers: Object.assign(headers(), { 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ id: key, value: value, shared: true, updated_at: new Date().toISOString() }]) });
+    if (!r.ok) throw new Error('Supabase set failed: HTTP ' + r.status + ' ' + (await r.text()).slice(0,150));
+    return { key: key, value: value, shared: true };
+  }
+  if (needsSetup){
+    window.storage = null;
+    document.addEventListener('DOMContentLoaded', () => {
+      const b = document.createElement('div');
+      b.style.cssText='position:fixed;inset:0;background:#10151c;color:#f2ede3;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;font-family:sans-serif;text-align:center;';
+      b.innerHTML='<div style="max-width:420px;"><div style="font-size:40px;">⚠️</div><h2>ยังไม่ได้ตั้งค่า Supabase</h2></div>';
+      document.body.appendChild(b);
+    });
+    return;
+  }
+  window.storage = { get, set };
+})();
+</script>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const r3 = n => Math.round(n*1000)/1000;
+  const r2 = n => Math.round(n*100)/100;
+  function localISO(d){ d=d||new Date(); const p=n=>String(n).padStart(2,'0');
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+  function hhmm(iso){ return (iso||'').slice(11,19); }
+  function ymd(iso){ return (iso||'').slice(0,10); }
+  function todayStr(){ return localISO().slice(0,10); }
+
+  /* ---------- PURE CALC (unit-tested) ---------- */
+  const CALC = {
+    rawStock(receipts,withdrawals){
+      const m={};
+      (receipts||[]).forEach(r=>{ m[r.fiberName]=m[r.fiberName]||{received:0,used:0}; m[r.fiberName].received=r3(m[r.fiberName].received+(+r.kg||0)); });
+      (withdrawals||[]).forEach(w=>{ m[w.fiberName]=m[w.fiberName]||{received:0,used:0}; m[w.fiberName].used=r3(m[w.fiberName].used+(+w.kg||0)); });
+      return Object.entries(m).map(([name,v])=>({name,received:v.received,used:v.used,stock:r3(v.received-v.used)}));
+    },
+    nextFiberLot(receipts, fiberName){ const mine=(receipts||[]).filter(r=>r.fiberName===fiberName); let mx=0; mine.forEach(r=>{ const n=parseInt(r.lotNo,10); if(!isNaN(n)&&n>mx) mx=n; }); return mx + 1; },
+    fiberLotStock(receipts, withdrawals){
+      return (receipts||[]).map(r=>{
+        const used = (withdrawals||[]).filter(w=>w.fiberName===r.fiberName && String(w.lot)===String(r.lotNo)).reduce((s,w)=>s+(+w.kg||0),0);
+        return { fiberName:r.fiberName, lotNo:r.lotNo, kg:r.kg, used:r3(used), remaining:r3(r.kg-used), time:r.time };
+      });
+    },
+    // ---------- จำนวนก้อนใย (นับแยกจากน้ำหนัก — ติ๊กออกทีละก้อนเมื่อใช้) ----------
+    baleStatus(fiberReceipts, baleUsage){
+      const usedByLot={};
+      (baleUsage||[]).forEach(u=>{ const k=u.fiberName+'||'+u.lotNo; usedByLot[k]=(usedByLot[k]||0)+(u.count||1); });
+      return (fiberReceipts||[]).filter(r=>r.baleCount!=null).map(r=>{
+        const k=r.fiberName+'||'+r.lotNo;
+        const used=usedByLot[k]||0;
+        return { fiberName:r.fiberName, lotNo:r.lotNo, baleCount:r.baleCount, used, remaining:Math.max(0,r.baleCount-used) };
+      });
+    },
+    totalBalesRemaining(fiberReceipts, baleUsage, fiberName){
+      return CALC.baleStatus(fiberReceipts,baleUsage).filter(b=>b.fiberName===fiberName).reduce((s,b)=>s+b.remaining,0);
+    },
+    nextRollNo(receipts, fabricType){ return (receipts||[]).filter(r=>r.fabricType===fabricType).reduce((m,r)=>Math.max(m,r.rollNo||0),0) + 1; },
+    availableRolls(receipts, cuts, fabricType){
+      const usedRolls=new Set((cuts||[]).filter(c=>c.fabricType===fabricType).map(c=>c.rollNo));
+      return (receipts||[]).filter(r=>r.fabricType===fabricType && !usedRolls.has(r.rollNo) && !r.retired);
+    },
+    rollStatus(receipts, cuts, cutBatches){
+      const usedMap={}; (cuts||[]).forEach(c=>{ usedMap[c.fabricType+'|'+c.rollNo]=c; });
+      return (receipts||[]).map(r=>{
+        const batchesFromRoll=(cutBatches||[]).filter(b=>b.fabricType===r.fabricType && b.rollNo===r.rollNo);
+        const remainLen = (r.widthIn && r.lengthIn) ? CALC.rollRemainingLength(r, batchesFromRoll) : null;
+        return { fabricType:r.fabricType, rollNo:r.rollNo, dateReceived:r.time,
+        used: !!usedMap[r.fabricType+'|'+r.rollNo], cutId: usedMap[r.fabricType+'|'+r.rollNo] ? usedMap[r.fabricType+'|'+r.rollNo].id : null,
+        retired: !!r.retired, widthIn:r.widthIn, lengthIn:r.lengthIn, remainLen };
+      });
+    },
+    // ---------- คำนวณจากหน้ากว้าง/ความยาวม้วนจริง (หน่วยนิ้ว) — ขนาดที่ตัด "18.5x28" ยังคงเป็น ซม. เหมือนเดิม ต้องแปลงเป็นนิ้วก่อนเทียบ ----------
+    CM_PER_IN: 2.54,
+    parseSize(sizeStr){
+      if(!sizeStr) return null;
+      const raw=String(sizeStr);
+      const m=raw.match(/(\d+\.?\d*)\s*[xX×*]\s*(\d+\.?\d*)/);
+      if(!m) return null;
+      /* หน่วยเริ่มต้นคือ ซม. (เท่าข้อมูลเดิมทั้งหมด) — ถ้าเขียน " หรือ นิ้ว หรือ in ต่อท้าย จะถือเป็นนิ้ว */
+      const isInch=/("|”|นิ้ว|\bin\b|inch)/i.test(raw);
+      return { w:+m[1], h:+m[2], unit: isInch?'in':'cm' };
+    },
+    rollRemainingLength(roll, cutBatchesFromRoll){
+      let consumedIn=0;
+      (cutBatchesFromRoll||[]).forEach(b=>{
+        const dim=CALC.parseSize(b.size); if(!dim||!dim.w) return;
+        const _k=(dim.unit==='in')?1:CALC.CM_PER_IN;
+        const pieceWIn=dim.w/_k, pieceHIn=dim.h/_k;
+        const piecesAcrossWidth=Math.max(1, Math.floor(roll.widthIn/pieceWIn));
+        consumedIn += Math.ceil(b.qtyCut/piecesAcrossWidth) * pieceHIn;
+      });
+      return r2(Math.max(0, roll.lengthIn-consumedIn));
+    },
+    fkey(fabricType,size){ return (fabricType||'')+'||'+(size||''); },
+    cutByFabricSize(cuts){
+      const m={}; (cuts||[]).forEach(c=>(c.rows||[]).forEach(row=>{ const k=CALC.fkey(c.fabricType,row.size); m[k]=(m[k]||0)+(+row.qty||0); })); return m;
+    },
+    // ---------- ถุงตัด (cut batch): แต่ละถุงมีเลขของตัวเอง เดินทาง ตัด→ส่งเย็บ→รับกลับ→เบิกผลิต ----------
+    nextCutBatchNo(cutBatches, fabricType, size){
+      const k=CALC.fkey(fabricType,size);
+      return (cutBatches||[]).filter(b=>CALC.fkey(b.fabricType,b.size)===k).reduce((m,b)=>Math.max(m,b.batchNo||0),0) + 1;
+    },
+    cutBatchStatus(cutBatches, sewSent, sewReturns, fabricWithdraw){
+      const sentByBatch={}, retByBatch={}, wdByBatch={};
+      (sewSent||[]).forEach(s=>{ sentByBatch[s.batchId]=(sentByBatch[s.batchId]||0)+(+s.qty||0); });
+      (sewReturns||[]).forEach(s=>{ retByBatch[s.batchId]=(retByBatch[s.batchId]||0)+(+s.qty||0); });
+      (fabricWithdraw||[]).forEach(w=>(w.picks||[]).forEach(p=>{ wdByBatch[p.batchId]=(wdByBatch[p.batchId]||0)+(+p.qty||0); }));
+      return (cutBatches||[]).map(b=>{
+        const sent=sentByBatch[b.id]||0, returned=retByBatch[b.id]||0, withdrawn=wdByBatch[b.id]||0;
+        return { batchId:b.id, batchNo:b.batchNo, fabricType:b.fabricType, size:b.size, qtyCut:b.qtyCut, time:b.time, rollNo:b.rollNo,
+          sent, returned, withdrawn,
+          cutBalance: r2(b.qtyCut-sent), sewingBalance: r2(sent-returned), readyBalance: r2(returned-withdrawn) };
+      });
+    },
+    // สต๊อกพร้อมผลิต (นับจากรับกลับ หักเบิกไปแล้ว) แยกตามประเภทสินค้า+ชนิดผ้า+ไซซ์ — ผ้า/ไซซ์/ประเภทเดียวกันรวมเป็นก้อนเดียว
+    productTypeStock(cutBatchStatusList, sewReturns){
+      const typeByBatch={};
+      (sewReturns||[]).forEach(r=>{ if(r.productType) typeByBatch[r.batchId]=r.productType; }); // เอาตัวล่าสุดทับตัวก่อน
+      const m={};
+      (cutBatchStatusList||[]).forEach(b=>{
+        const pt=typeByBatch[b.batchId];
+        if(!pt || b.readyBalance<=0) return;
+        const key=pt+'||'+b.fabricType+'||'+b.size;
+        m[key]=m[key]||{productType:pt, fabricType:b.fabricType, size:b.size, qty:0};
+        m[key].qty=r2(m[key].qty+b.readyBalance);
+      });
+      return Object.values(m);
+    },
+    productTypeTotal(prodTypeStockList, productType){
+      return r2((prodTypeStockList||[]).filter(x=>x.productType===productType).reduce((s,x)=>s+x.qty,0));
+    },
+    // เลือกถุงแบบ FIFO (เลขน้อย/เก่าสุดก่อน) ไล่หยิบจนครบจำนวนที่ต้องการ ไม่ต้องกดทีละถุง
+    pickBatchesForWithdrawal(batchStatusList, fabricType, size, qtyNeeded){
+      const eligible=(batchStatusList||[]).filter(b=>b.fabricType===fabricType && b.size===size && b.readyBalance>0)
+        .sort((a,b)=>a.batchNo-b.batchNo);
+      const picks=[]; let remaining=qtyNeeded;
+      for(const b of eligible){
+        if(remaining<=0) break;
+        const take=Math.min(b.readyBalance, remaining);
+        picks.push({batchId:b.batchId, batchNo:b.batchNo, take});
+        remaining-=take;
+      }
+      return { picks, short: Math.max(0,r2(remaining)), total: r2(qtyNeeded-Math.max(0,remaining)) };
+    },
+    fabricPipelineV3(cutBatchStatusList){
+      const m={};
+      (cutBatchStatusList||[]).forEach(b=>{
+        const k=CALC.fkey(b.fabricType,b.size);
+        m[k]=m[k]||{fabricType:b.fabricType,size:b.size,cut:0,awaitingSewing:0,sent:0,atSewing:0,returned:0,used:0,readyStock:0};
+        m[k].cut+=b.qtyCut; m[k].awaitingSewing+=b.cutBalance; m[k].sent+=b.sent; m[k].atSewing+=b.sewingBalance;
+        m[k].returned+=b.returned; m[k].used+=b.withdrawn; m[k].readyStock+=b.readyBalance;
+      });
+      return Object.values(m).map(v=>({...v, cut:r2(v.cut), awaitingSewing:r2(v.awaitingSewing), sent:r2(v.sent),
+        atSewing:r2(v.atSewing), returned:r2(v.returned), used:r2(v.used), readyStock:r2(v.readyStock)}));
+    },
+    nextSackNo(sackReceipts, kind, name){ const mine=(sackReceipts||[]).filter(s=>s.kind===kind && s.name===name); let mx=0; mine.forEach(s=>{ const n=parseInt(s.sackNo,10); if(!isNaN(n)&&n>mx) mx=n; }); return mx + 1; },
+    sackPieces(kg, weightPerBag){ if(!weightPerBag) return 0; return Math.round(kg/weightPerBag); },
+    sackStatus(sackReceipts, sackWithdraw){
+      const wdBySack={};
+      (sackWithdraw||[]).forEach(w=>(w.picks||[]).forEach(p=>{ wdBySack[p.sackId]=(wdBySack[p.sackId]||0)+(+p.kg||0); }));
+      return (sackReceipts||[]).map(s=>{
+        const used=wdBySack[s.id]||0;
+        return { sackId:s.id, sackNo:s.sackNo, kind:s.kind, name:s.name, size:s.size,
+          sackWeightKg:s.sackWeightKg, weightPerBag:s.weightPerBag, time:s.time,
+          used:r3(used), remainingKg:r3(s.sackWeightKg-used),
+          remainingPieces: CALC.sackPieces(Math.max(0,s.sackWeightKg-used), s.weightPerBag) };
+      });
+    },
+    // เบิกกระสอบแบบ FIFO ข้ามหลายใบจนครบ (เหมือนที่ใช้กับผ้า)
+    pickSacksForWithdrawal(sackStatusList, kind, name, kgNeeded){
+      const eligible=(sackStatusList||[]).filter(s=>s.kind===kind && s.name===name && s.remainingKg>0)
+        .sort((a,b)=>a.sackNo-b.sackNo);
+      const picks=[]; let remaining=kgNeeded;
+      for(const s of eligible){
+        if(remaining<=0) break;
+        const take=Math.min(s.remainingKg, remaining);
+        picks.push({sackId:s.sackId, sackNo:s.sackNo, take:r3(take)});
+        remaining-=take;
+      }
+      return { picks, short: Math.max(0,r3(remaining)), total: r3(kgNeeded-Math.max(0,remaining)) };
+    },
+    bagAggregate(sackStatusList, kind){
+      const m={};
+      sackStatusList.filter(s=>s.kind===kind).forEach(s=>{
+        m[s.name]=m[s.name]||{name:s.name,receivedKg:0,remainingKg:0,weightPerBag:s.weightPerBag};
+        m[s.name].receivedKg=r3(m[s.name].receivedKg+s.sackWeightKg);
+        m[s.name].remainingKg=r3(m[s.name].remainingKg+s.remainingKg);
+        m[s.name].weightPerBag=s.weightPerBag; // ใช้ค่าล่าสุด
+      });
+      return Object.values(m).map(v=>({...v, remainingPieces: CALC.sackPieces(v.remainingKg, v.weightPerBag)}));
+    },
+    finStock(producedByOrder, shipments, adjustments){
+      const m={};
+      Object.entries(producedByOrder||{}).forEach(([id,qty])=>{ m[id]=m[id]||{produced:0,shipped:0,adjusted:0}; m[id].produced=qty; });
+      (shipments||[]).forEach(s=>{ m[s.orderId]=m[s.orderId]||{produced:0,shipped:0,adjusted:0}; m[s.orderId].shipped=r2(m[s.orderId].shipped+(+s.qty||0)); });
+      (adjustments||[]).filter(a=>a.orderId).forEach(a=>{ m[a.orderId]=m[a.orderId]||{produced:0,shipped:0,adjusted:0}; m[a.orderId].adjusted=r2(m[a.orderId].adjusted+(+a.delta||0)); });
+      return Object.entries(m).map(([orderId,v])=>({ orderId, produced:v.produced, shipped:v.shipped, adjusted:v.adjusted, stock:r2(v.produced-v.shipped+v.adjusted) }));
+    },
+    // สินค้าที่ยังไม่มีออเดอร์จริงในแอพผลิต — ลงยอดยกมาอิสระด้วยชื่อลูกค้า+รหัสของตัวเอง ไม่ผูกกับ orderId เลย
+    freeFinStock(adjustments){
+      const m={};
+      (adjustments||[]).filter(a=>!a.orderId && a.freeLabel).forEach(a=>{
+        m[a.freeLabel]=m[a.freeLabel]||{freeLabel:a.freeLabel, stock:0};
+        m[a.freeLabel].stock=r2(m[a.freeLabel].stock+(+a.delta||0));
+      });
+      return Object.values(m);
+    },
+    fifoLotRef(prodLines, alreadyShipped, qty){
+      const sorted=(prodLines||[]).slice().sort((a,b)=>a.time<b.time?-1:1);
+      const slice=sorted.slice(alreadyShipped, alreadyShipped+qty);
+      if(!slice.length) return { seqFrom:null, seqTo:null, dateFrom:null, dateTo:null, count:0, short: qty, seqs:[] };
+      const seqs=slice.map(l=>l.seq), dates=slice.map(l=>l.time.slice(0,10));
+      return { seqFrom:Math.min(...seqs), seqTo:Math.max(...seqs), dateFrom:dates[0], dateTo:dates[dates.length-1], count:slice.length, short:Math.max(0,qty-slice.length), seqs };
+    },
+    // นับว่าออเดอร์นี้ถูกส่งไปแล้วกี่แพ็ค เฉพาะที่มาจากวันผลิตวันนี้ (ใช้ตอนเลือกวันที่ผลิตเจาะจงตอนจัดส่ง)
+    shippedCountForDate(deliveries, orderId, date){
+      let n=0;
+      (deliveries||[]).forEach(d=>d.items.forEach(it=>{ if(it.orderId===orderId && it.refDateFrom===date && it.refDateTo===date) n+=it.qty; }));
+      return n;
+    },
+    checklistComplete(item){ return (item.seqs||[]).length>0 && (item.checkedSeqs||[]).length===(item.seqs||[]).length; },
+    // ---------- ถังแก๊ส: นับเป็นชิ้นเรียงเลข เหมือนม้วนผ้า ----------
+    nextGasNo(gasReceipts){ return (gasReceipts||[]).reduce((m,g)=>Math.max(m,g.gasNo||0),0) + 1; },
+    gasStatus(gasReceipts, gasSwaps){
+      const usedNos=new Set();
+      (gasSwaps||[]).forEach(s=>(s.gasNos||[]).forEach(n=>usedNos.add(n)));
+      return (gasReceipts||[]).map(g=>({ gasNo:g.gasNo, time:g.time, used:usedNos.has(g.gasNo) }));
+    },
+    availableGas(gasReceipts, gasSwaps){
+      return CALC.gasStatus(gasReceipts,gasSwaps).filter(g=>!g.used).sort((a,b)=>a.gasNo-b.gasNo);
+    }
+  };
+
+  /* ---------- STATE ---------- */
+  let S = { fiberReceipts:[], fiberTh:{}, baleUsage:[], fabricReceipts:[], cuts:[], cutBatches:[], sewSent:[], sewReturns:[], waste:[], prodTypeTh:{},
+            sackReceipts:[], gasReceipts:[], shipments:[], deliveries:[], finAdjustments:[] };
+  let PROD = { orders:[], wd:[], fabricWd:[], bagWd:[], gasSwaps:[], line:[] };
+  let current='fiber', lastHash='';
+
+  const hasStore = !!(window.storage && window.storage.get && window.storage.set);
+  let storeDown = !hasStore;
+  const pending={}, inflight={};
+  const KEYMAP = {
+    v3s_fiber:  ()=>({receipts:S.fiberReceipts, th:S.fiberTh, baleUsage:S.baleUsage}),
+    v3s_fabric: ()=>({receipts:S.fabricReceipts, cuts:S.cuts, cutBatches:S.cutBatches, sewSent:S.sewSent, sewReturns:S.sewReturns, waste:S.waste, prodTypeTh:S.prodTypeTh}),
+    v3s_bag:    ()=>({receipts:S.sackReceipts}),
+    v3s_gas:    ()=>({receipts:S.gasReceipts}),
+    v3s_fin:    ()=>({shipments:S.shipments, deliveries:S.deliveries, finAdjustments:S.finAdjustments})
+  };
+  function setSaveState(state,msg){
+    const el=$('saveState'); if(!el) return;
+    if(state==='saving'){ el.className='savechip saving'; el.textContent='กำลังบันทึก…'; }
+    else if(state==='ok'){ el.className='savechip ok'; el.textContent='บันทึกแล้ว ✓'; }
+    else { el.className='savechip bad'; el.textContent='⚠ ยังบันทึกไม่สำเร็จ — แตะเพื่อลองใหม่'+(msg?' ('+msg+')':''); }
+  }
+  async function flush(k,attempt){
+    attempt=attempt||0;
+    /* ถ้ากำลังบันทึกคีย์นี้อยู่ ต้องนัดลองใหม่ ห้ามทิ้งเงียบ ไม่งั้นการแก้ล่าสุดจะไม่ถูกเขียนลงเซิร์ฟเวอร์ */
+    if(inflight[k]){ setTimeout(()=>flush(k,attempt),400); return; }
+    if(!(k in pending)) return;
+    const data=pending[k]; delete pending[k]; inflight[k]=true; setSaveState('saving');
+    try{
+      if(!hasStore) throw new Error('no storage');
+      await window.storage.set(k,JSON.stringify(data),true);
+      inflight[k]=false; storeDown=false;
+      await window.storage.set('v3s_pulse',Date.now()+'',true).catch(()=>{});
+      if(Object.keys(pending).length) Object.keys(pending).forEach(kk=>flush(kk)); else setSaveState('ok');
+    }catch(e){
+      inflight[k]=false; pending[k]=data;
+      if(attempt<6){ setTimeout(()=>flush(k,attempt+1), Math.min(15000,600*Math.pow(2,attempt))); setSaveState('saving'); }
+      else { storeDown=true; setSaveState('bad', (e&&e.message)?String(e.message).slice(0,60):''); }
+    }
+  }
+  function put(k){ pending[k]=KEYMAP[k](); return flush(k); }
+  /* กันข้อมูลหาย: ถ้ายังบันทึกไม่เสร็จแล้วผู้ใช้ปิด/รีเฟรชหน้า ให้เตือนก่อน */
+  window.addEventListener('beforeunload',function(e){
+    const busy = Object.keys(pending).length || Object.keys(inflight).some(k=>inflight[k]);
+    if(busy){ e.preventDefault(); e.returnValue=''; return ''; }
+  });
+  const saveFiber=()=>put('v3s_fiber'), saveFabric=()=>put('v3s_fabric'), saveBag=()=>put('v3s_bag'), saveGas=()=>put('v3s_gas'), saveFin=()=>put('v3s_fin');
+
+  async function rawGet(k){ if(!hasStore) return null; try{ const r=await window.storage.get(k,true); return r?r.value:null; }catch(e){ return null; } }
+  async function readAll(){
+    const [fi,fa,bg,gs,fn,ord,fd,ln] = await Promise.all([
+      rawGet('v3s_fiber'), rawGet('v3s_fabric'), rawGet('v3s_bag'), rawGet('v3s_gas'), rawGet('v3s_fin'),
+      rawGet('v3_orders'), rawGet('v3_feed'), rawGet('v3_line')
+    ]);
+    const hash=[fi,fa,bg,gs,fn,ord,fd,ln].map(x=>x||'').join('|');
+    const parse=(s,f)=>{ try{ return s?JSON.parse(s):f; }catch(e){ return f; } };
+    const Pf=parse(fi,{}), Pa=parse(fa,{}), Pb=parse(bg,{}), Pg=parse(gs,{}), Pn=parse(fn,{});
+    S.fiberReceipts=Pf.receipts||[]; S.fiberTh=Pf.th||{}; S.baleUsage=Pf.baleUsage||[];
+    S.fabricReceipts=Pa.receipts||[]; S.cuts=Pa.cuts||[]; S.cutBatches=Pa.cutBatches||[]; S.sewSent=Pa.sewSent||[]; S.sewReturns=Pa.sewReturns||[]; S.waste=Pa.waste||[]; S.prodTypeTh=Pa.prodTypeTh||{};
+    S.sackReceipts=Pb.receipts||[];
+    S.gasReceipts=Pg.receipts||[];
+    S.shipments=Pn.shipments||[]; S.deliveries=Pn.deliveries||[]; S.finAdjustments=Pn.finAdjustments||[];
+    const A=parse(ord,{orders:[]}), B=parse(fd,{wd:[]}), C=parse(ln,{line:[]});
+    PROD.orders=A.orders||[]; PROD.wd=B.wd||[]; PROD.fabricWd=B.fabricWd||[]; PROD.bagWd=B.bagWd||[]; PROD.gasSwaps=B.gasSwaps||[]; PROD.line=C.line||[];
+    return hash;
+  }
+
+  let toastT;
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400); }
+  const orderById = id => PROD.orders.find(o=>o.id===id) || null;
+  function orderLabel(id){ const o=orderById(id); return o? o.customer+' — '+o.code : '(ออเดอร์ถูกลบแล้ว)'; }
+  function producedByOrder(){ const m={}; PROD.line.forEach(l=>{ m[l.orderId]=(m[l.orderId]||0)+1; }); return m; }
+  function ask(title, detail, opts){
+    opts=opts||{};
+    return new Promise(function(res){
+      var ov=document.createElement('div');
+      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:99998;display:flex;align-items:center;justify-content:center;padding:18px';
+      var bx=document.createElement('div');
+      bx.style.cssText='background:#1a222c;color:#f2ede3;border:1px solid #2b3645;border-radius:14px;max-width:430px;width:100%;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.5)';
+      var h=document.createElement('div'); h.style.cssText="font:600 17px 'Kanit',sans-serif;margin-bottom:8px"; h.textContent=title||'';
+      var p=document.createElement('div'); p.style.cssText="font:400 14px/1.65 'Sarabun',sans-serif;white-space:pre-line;color:#c7d2dd;margin-bottom:16px"; p.textContent=detail||'';
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:10px';
+      var ok=document.createElement('button'); ok.textContent=opts.okText||'ยืนยัน'; ok.setAttribute('data-noguard','1');
+      ok.style.cssText="flex:1;padding:13px;border:0;border-radius:10px;background:#ff8a3d;color:#12181f;font:600 15px 'Kanit',sans-serif";
+      var no=document.createElement('button'); no.textContent=opts.cancelText||'ยกเลิก'; no.setAttribute('data-noguard','1');
+      no.style.cssText="flex:1;padding:13px;border:1px solid #2b3645;border-radius:10px;background:#212b37;color:#f2ede3;font:600 15px 'Kanit',sans-serif";
+      function done(v){ try{ document.body.removeChild(ov); }catch(e){} res(v); }
+      ok.onclick=function(){done(true);}; no.onclick=function(){done(false);};
+      ov.onclick=function(e){ if(e.target===ov) done(false); };
+      row.appendChild(ok); if(!opts.infoOnly) row.appendChild(no);
+      bx.appendChild(h); if(detail) bx.appendChild(p); bx.appendChild(row);
+      ov.appendChild(bx); document.body.appendChild(ov); setTimeout(function(){ok.focus();},30);
+    });
+  }
+  function info(title, detail){ return ask(title, detail, {infoOnly:true, okText:'ตกลง'}); }
+  function askText(title, detail, defVal){
+    return new Promise(function(res){
+      var ov=document.createElement('div');
+      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:99998;display:flex;align-items:center;justify-content:center;padding:18px';
+      var bx=document.createElement('div');
+      bx.style.cssText='background:#1a222c;color:#f2ede3;border:1px solid #2b3645;border-radius:14px;max-width:430px;width:100%;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.5)';
+      var h=document.createElement('div'); h.style.cssText="font:600 17px 'Kanit',sans-serif;margin-bottom:8px"; h.textContent=title||'';
+      var p=document.createElement('div'); p.style.cssText="font:400 14px/1.65 'Sarabun',sans-serif;white-space:pre-line;color:#c7d2dd;margin-bottom:12px"; p.textContent=detail||'';
+      var inp=document.createElement('input'); inp.type='text'; inp.value=(defVal==null?'':String(defVal));
+      inp.style.cssText="width:100%;padding:12px;border:1px solid #2b3645;border-radius:10px;background:#12181f;color:#f2ede3;font:400 15px 'Sarabun',sans-serif;margin-bottom:14px";
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:10px';
+      var ok=document.createElement('button'); ok.textContent='บันทึก'; ok.setAttribute('data-noguard','1');
+      ok.style.cssText="flex:1;padding:13px;border:0;border-radius:10px;background:#ff8a3d;color:#12181f;font:600 15px 'Kanit',sans-serif";
+      var no=document.createElement('button'); no.textContent='ยกเลิก'; no.setAttribute('data-noguard','1');
+      no.style.cssText="flex:1;padding:13px;border:1px solid #2b3645;border-radius:10px;background:#212b37;color:#f2ede3;font:600 15px 'Kanit',sans-serif";
+      function done(v){ try{ document.body.removeChild(ov); }catch(e){} res(v); }
+      ok.onclick=function(){ done(inp.value); }; no.onclick=function(){ done(null); };
+      inp.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); done(inp.value); } };
+      ov.onclick=function(e){ if(e.target===ov) done(null); };
+      row.appendChild(ok); row.appendChild(no);
+      bx.appendChild(h); if(detail) bx.appendChild(p); bx.appendChild(inp); bx.appendChild(row);
+      ov.appendChild(bx); document.body.appendChild(ov); setTimeout(function(){inp.focus();inp.select();},30);
+    });
+  }
+  /* ใช้แทน prompt() เดิม — รับข้อความรูปแบบเดียวกัน แล้วแยกหัวข้อ/รายละเอียดให้เอง */
+  function askText2(msg, defVal){
+    const parts=String(msg==null?'':msg).split('\n\n');
+    return askText(parts[0], parts.slice(1).join('\n\n'), defVal);
+  }
+
+  /* ---------- NAV ---------- */
+  const PANELS=['fiber','fabric','bag','gas','fin','ship','sum'];
+  function show(p){
+    current=p;
+    try{ window.scrollTo(0,0); }catch(e){}
+    PANELS.forEach(x=>$('p-'+x).classList.toggle('show',x===p));
+    document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+    renderPanel();
+  }
+  document.querySelectorAll('.nb').forEach(b=>b.addEventListener('click',()=>show(b.dataset.p)));
+  function renderPanel(){
+    if(current==='fiber') rFiber();
+    else if(current==='fabric') rFabric();
+    else if(current==='bag') rBag();
+    else if(current==='gas') rGas();
+    else if(current==='fin') rFin();
+    else if(current==='ship') rShip();
+    else if(current==='sum') rSum();
+  }
+
+  /* ---------- 1. FIBER ---------- */
+  function allFiberNames(){
+    const set=new Set();
+    PROD.orders.forEach(o=>(o.fibers||[]).forEach(f=>set.add(f.name)));
+    PROD.wd.forEach(w=>set.add(w.fiberName));
+    S.fiberReceipts.forEach(r=>set.add(r.fiberName));
+    return Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
+  }
+  let fiberLotFilter=null;
+  let prodTypeFilter=null;
+  function rFiber(){
+    if(!$('rwDate').value) $('rwDate').value=todayStr();
+    const stock=CALC.rawStock(S.fiberReceipts, PROD.wd);
+    const names=allFiberNames(); const known=new Set(stock.map(s=>s.name));
+    names.forEach(n=>{ if(!known.has(n)) stock.push({name:n,received:0,used:0,stock:0}); });
+    stock.sort((a,b)=>a.name.localeCompare(b.name,'th'));
+    $('fiberCards').innerHTML = stock.length ? stock.map(s=>{
+      const th=+S.fiberTh[s.name]||0, low=th>0&&s.stock<th;
+      return '<div class="scard'+(low?' lowstock':'')+'" data-fibercard="'+esc(s.name)+'" style="cursor:pointer;"><div class="nm">'+esc(s.name)+(low?' <span class="bdg bad">ใกล้หมด</span>':'')+'</div>'+
+        '<div class="n">'+s.stock+' <span style="font-size:13px;color:#ffffff;">กก.</span></div>'+
+        '<div class="l">รับเข้า '+s.received+' กก. · เบิกใช้ '+s.used+' กก.'+(th>0?' · เตือนต่ำกว่า '+th:'')+' · แตะดูล็อต+จำนวนก้อน ▾</div></div>';
+    }).join('') : '<div class="empty">ยังไม่มีข้อมูล</div>';
+    $('fiberCards').querySelectorAll('[data-fibercard]').forEach(c=>c.onclick=()=>{
+      fiberLotFilter=c.dataset.fibercard; rFiber();
+      document.getElementById('tFiberLots').scrollIntoView({behavior:'smooth',block:'center'});
+    });
+
+    const nms=allFiberNames();
+    const keepRw=$('rwSel').value;
+    $('rwSel').innerHTML='<option value="">— เลือกใย —</option>'+nms.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('')+'<option value="__new__">+ พิมพ์ชื่อใหม่…</option>';
+    if(keepRw==='__new__'||nms.includes(keepRw)) $('rwSel').value=keepRw;
+    $('dlRwFiber').innerHTML=nms.map(n=>'<option value="'+esc(n)+'"></option>').join('');
+    $('thSel').innerHTML=nms.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
+    updateRwLotPreview();
+
+    let lots=CALC.fiberLotStock(S.fiberReceipts, PROD.wd);
+    if($('fiberLotFilterBar')){
+      $('fiberLotFilterBar').innerHTML = fiberLotFilter
+        ? 'กำลังดูเฉพาะ: <b style="color:var(--accent2)">'+esc(fiberLotFilter)+'</b> <button class="x" id="btnClearFiberFilter">✕ ล้างตัวกรอง (ดูทั้งหมด)</button>'
+        : '';
+      if($('btnClearFiberFilter')) $('btnClearFiberFilter').onclick=()=>{ fiberLotFilter=null; rFiber(); };
+    }
+    if(fiberLotFilter) lots=lots.filter(l=>l.fiberName===fiberLotFilter);
+    const baleStatus=CALC.baleStatus(S.fiberReceipts,S.baleUsage);
+    const baleByLot={}; baleStatus.forEach(b=>{ baleByLot[b.fiberName+'||'+b.lotNo]=b; });
+    $('tFiberLots').innerHTML=lots.length?'<tr><th>ใย</th><th>ล็อต</th><th>รับเข้า</th><th>เบิกใช้</th><th>คงเหลือ</th><th>จำนวนก้อน</th><th>วันที่รับ</th><th></th></tr>'+
+      lots.slice().reverse().map(l=>{
+        const bale=baleByLot[l.fiberName+'||'+l.lotNo];
+        return '<tr><td>'+esc(l.fiberName)+'</td><td>'+l.lotNo+'</td><td>'+l.kg+'</td><td>'+l.used+
+        '</td><td><b style="color:'+(l.remaining<0?'var(--red)':'var(--accent2)')+'">'+l.remaining+'</b></td>'+
+        '<td>'+(bale?('เหลือ <b style="color:var(--accent2)">'+bale.remaining+'</b> / '+bale.baleCount+' ก้อน '+
+          (bale.remaining>0?'<button class="ed" data-baletick="'+esc(l.fiberName)+'|'+l.lotNo+'">−1 ก้อน</button>':'')+
+          (bale.used>0?'<button class="ed" data-baleundo="'+esc(l.fiberName)+'|'+l.lotNo+'">↩ +1</button>':'')):'—')+
+        '</td><td>'+ymd(l.time)+
+        '</td><td><button class="ed" data-fladj="'+esc(l.fiberName)+'|'+l.lotNo+'">ปรับยอดคงเหลือ</button></td></tr>';
+      }).join('')
+      :'<tr><td class="empty">'+(fiberLotFilter?'ใยนี้ยังไม่มีล็อต':'ยังไม่มีข้อมูล')+'</td></tr>';
+    $('tFiberLots').querySelectorAll('[data-baletick]').forEach(b=>b.onclick=async()=>{
+      const [name,lotNo]=b.dataset.baletick.split('|');
+      S.baleUsage.push({fiberName:name,lotNo:+lotNo,count:1,time:localISO()});
+      await saveFiber(); rFiber(); toast('ติ๊กออก 1 ก้อนแล้ว');
+    });
+    $('tFiberLots').querySelectorAll('[data-baleundo]').forEach(b=>b.onclick=async()=>{
+      const [name,lotNo]=b.dataset.baleundo.split('|');
+      S.baleUsage.push({fiberName:name,lotNo:+lotNo,count:-1,time:localISO()});
+      await saveFiber(); rFiber(); toast('เอากลับมา 1 ก้อนแล้ว (แก้ติ๊กพลาด)');
+    });
+    $('tFiberLots').querySelectorAll('[data-fladj]').forEach(b=>b.onclick=async()=>{
+      const [name,lotNo]=b.dataset.fladj.split('|');
+      const lot=lots.find(l=>l.fiberName===name && String(l.lotNo)===lotNo); if(!lot) return;
+      const input=await askText2('ปรับยอดคงเหลือของ "'+name+'" ล็อต '+lotNo+' เป็นเท่าไหร่ (กก.)\n\nตอนนี้เหลือ '+lot.remaining+' กก. (เบิกไปแล้ว '+lot.used+' กก.)', lot.remaining);
+      if(input===null) return;
+      const newRemaining=+input; if(isNaN(newRemaining)||newRemaining<0){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
+      const r=S.fiberReceipts.find(x=>x.fiberName===name && String(x.lotNo)===lotNo); if(!r) return;
+      const _before=r.kg;
+      r.kg=r3(lot.used+newRemaining);
+      /* เก็บประวัติการปรับยอดไว้ ไม่ให้ยอดเดิมหายไปเงียบๆ */
+      r.adjLog=(r.adjLog||[]); r.adjLog.push({ time:localISO(), from:_before, to:r.kg, remainingTo:newRemaining });
+      if(r.adjLog.length>50) r.adjLog=r.adjLog.slice(-50);
+      await saveFiber(); rFiber(); toast('ปรับยอดล็อต '+lotNo+' จาก '+_before+' → '+r.kg+' กก. แล้ว');
+    });
+
+    $('tRw').innerHTML=S.fiberReceipts.length?'<tr><th>เวลา</th><th>ใย</th><th>ล็อต</th><th>กก.</th><th>ผู้ขาย</th><th></th></tr>'+
+      S.fiberReceipts.slice().reverse().map(r=>'<tr><td>'+ymd(r.time)+' '+hhmm(r.time)+'</td><td>'+esc(r.fiberName)+'</td><td>'+r.lotNo+
+      '</td><td>'+r.kg+'</td><td>'+esc(r.supplier||'—')+'</td><td><button class="ed" data-e="'+r.id+'">แก้ไข</button> <button class="x" data-d="'+r.id+'">✕</button></td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';
+    $('tRw').querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{ const _r=S.fiberReceipts.find(x=>x.id===b.dataset.d)||{}; if(!await ask('ลบรายการรับเข้าใยนี้?','ใย: '+(_r.fiberName||'-')+'\nล็อต: '+(_r.lotNo!=null?_r.lotNo:'-')+'\nน้ำหนัก: '+(_r.kg!=null?_r.kg:'-')+' กก.\nวันที่รับ: '+ymd(_r.time||'')+'\n\nลบแล้วยอดคงเหลือของใยนี้จะลดลงตามน้ำหนักข้างบน'))return; S.fiberReceipts=S.fiberReceipts.filter(x=>x.id!==b.dataset.d); await saveFiber(); rFiber(); toast('ลบแล้ว'); });
+    $('tRw').querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>editFiberReceipt(b.dataset.e));
+
+    const useRows=PROD.wd.slice().sort((a,b)=>a.time<b.time?1:-1).slice(0,80);
+    $('tRwUse').innerHTML=useRows.length?'<tr><th>เวลา</th><th>ออเดอร์</th><th>ใย</th><th>ก้อนที่</th><th>ล็อตที่เบิก</th><th>กก.</th></tr>'+
+      useRows.map(w=>'<tr><td>'+ymd(w.time)+' '+hhmm(w.time)+'</td><td>'+esc(orderLabel(w.orderId))+'</td><td>'+esc(w.fiberName)+'</td><td>'+esc(w.seq||'—')+'</td><td>'+esc(w.lot||'—')+'</td><td>'+w.kg+'</td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีการเบิกใย</td></tr>';
+  }
+  function updateRwLotPreview(){
+    const n=($('rwSel').value==='__new__')?$('rwName').value.trim():$('rwSel').value;
+    $('rwLotPreview').textContent = n ? 'ล็อตถัดไปของ "'+n+'" จะเป็น: ล็อต '+CALC.nextFiberLot(S.fiberReceipts,n) : '';
+  }
+  $('rwSel').onchange=function(){ const v=this.value,t=$('rwName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} updateRwLotPreview(); };
+  $('rwName').oninput=updateRwLotPreview;
+  $('btnRw').onclick=async()=>{
+    const n=($('rwSel').value==='__new__'?$('rwName').value:$('rwSel').value).trim(), kg=+$('rwKg').value;
+    if(!n||!kg){ toast('กรอกชื่อใยและน้ำหนัก'); return; }
+    const customLot=$('rwLotNo').value.trim();
+    const lotNo=customLot?+customLot:CALC.nextFiberLot(S.fiberReceipts,n);
+    if(customLot && S.fiberReceipts.some(r=>r.fiberName===n && String(r.lotNo)===String(lotNo))){
+      if(!await ask('เลขล็อต '+lotNo+' ('+n+') มีอยู่แล้วในระบบ','ยืนยันจะสร้างล็อตใหม่เลขซ้ำกันหรือไม่? (แนะนำให้เว้นว่างให้ระบบเรียงเลขใหม่แทน)')) return;
+    }
+    const dateVal=$('rwDate').value?$('rwDate').value+'T'+localISO().slice(11):localISO();
+    const baleCount=+$('rwBales').value||null;
+    const _w=[];
+    if(kg>20000) _w.push('รับเข้า '+kg+' กก. ในครั้งเดียว ดูเยอะผิดปกติ');
+    if(kg<1) _w.push('รับเข้าแค่ '+kg+' กก. ดูน้อยผิดปกติ');
+    const _ref=lastOf(S.fiberReceipts,r=>r.fiberName===n,'kg');
+    if(_ref>0 && (kg>_ref*10||kg<_ref/10))
+      _w.push('ครั้งก่อนใย "'+n+'" รับเข้า '+_ref+' กก. แต่ครั้งนี้กรอก '+kg+' กก.');
+    if(baleCount && kg/baleCount>500) _w.push('เฉลี่ยก้อนละ '+Math.round(kg/baleCount)+' กก. ดูหนักผิดปกติ');
+    if(!await confirmOdd(_w)) return;
+    S.fiberReceipts.push({id:uid(),time:dateVal,fiberName:n,lotNo,kg,baleCount,supplier:$('rwSupplier').value.trim(),note:$('rwNote').value.trim()});
+    await saveFiber();
+    ['rwSupplier','rwNote','rwKg','rwBales','rwLotNo'].forEach(id=>$(id).value='');
+    // ชื่อใยที่เลือกไว้ค้างต่อเนื่อง จนกว่าจะเปลี่ยนเอง (มักรับเข้าใยตัวเดิมหลายรอบติดกัน)
+    rFiber(); toast('บันทึกรับเข้าใยแล้ว — ล็อต '+lotNo+(baleCount?' ('+baleCount+' ก้อน)':''));
+  };
+  $('btnTh').onclick=async()=>{ const n=$('thSel').value; if(!n){toast('เลือกใยก่อน');return;} S.fiberTh[n]=+$('thKg').value||0; await saveFiber(); $('thKg').value=''; rFiber(); toast('ตั้งจุดเตือนแล้ว'); };
+  let editingFiberId=null;
+  async function editFiberReceipt(id){
+    const r=S.fiberReceipts.find(x=>x.id===id); if(!r) return;
+    editingFiberId=id;
+    const kg=await askText2('แก้ไขน้ำหนักรับเข้า (กก.) — ล็อต '+r.lotNo+' ของ '+r.fiberName, r.kg);
+    if(kg===null) return;
+    const v=+kg; if(!v){ toast('น้ำหนักไม่ถูกต้อง'); return; }
+    r.kg=v; saveFiber().then(()=>{ rFiber(); toast('แก้ไขแล้ว'); });
+  }
+
+  /* ---------- 2. FABRIC ---------- */
+
+  /* ตัวคูณในไซซ์ใช้ตัว x ตัวเดียวทั้งระบบ พิมพ์ * หรือ × มาก็แปลงให้เอง จะได้ไม่มีไซซ์ซ้ำเพราะเขียนคนละแบบ */
+  function normSize(v){
+    /* แปลงเฉพาะตอนที่เป็นตัวคูณจริงๆ คือมีตัวเลขตามหลัง จะได้ไม่ไปยุ่งกับดอกจันที่ใช้ทำเครื่องหมายอย่างอื่น */
+    return String(v==null?'':v).trim().replace(/\s*[*×✕Xx]\s*(?=\d)/g,'x');
+  }
+  /* กันพิมพ์ผิด — เทียบกับที่เคยรับเข้าของเดิม ถ้าต่างกันมากให้ถามก่อน */
+  function lastOf(list, match, field){
+    const rows=(list||[]).filter(match);
+    if(!rows.length) return 0;
+    const last=rows.reduce((m,x)=>(x.time>m.time?x:m),rows[0]);
+    return +last[field]||0;
+  }
+  async function confirmOdd(lines){
+    if(!lines.length) return true;
+    return await ask('ตัวเลขดูผิดปกติ — ตรวจอีกครั้งก่อนบันทึก',
+      lines.map(x=>'• '+x).join('\n')+'\n\nยืนยันว่าตัวเลขถูกต้องแล้ว?');
+  }
+  function allFabricTypes(){
+    const set=new Set(); S.fabricReceipts.forEach(r=>set.add(r.fabricType)); S.cuts.forEach(c=>set.add(c.fabricType));
+    /* รวมชนิดผ้าที่มาจากถุงตัด/ส่งเย็บ/รับกลับ (โหมดกรอกอิสระที่ไม่มีม้วนอ้างอิง) ด้วย */
+    (S.cutBatches||[]).forEach(b=>set.add(b.fabricType));
+    (S.sewSent||[]).forEach(b=>set.add(b.fabricType));
+    (S.sewReturns||[]).forEach(b=>set.add(b.fabricType));
+    return Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
+  }
+  function allSizes(){
+    const set=new Set();
+    S.cuts.forEach(c=>(c.rows||[]).forEach(r=>set.add(r.size)));
+    (S.cutBatches||[]).forEach(b=>set.add(b.size));
+    return Array.from(set).filter(Boolean).sort();
+  }
+  function rFabric(){
+    const types=allFabricTypes();
+    const rollsByType=types.map(t=>({ fabricType:t, avail:CALC.availableRolls(S.fabricReceipts,S.cuts,t).length }));
+    $('rollCards').innerHTML=rollsByType.length?rollsByType.map(r=>
+      '<div class="scard'+(r.avail<=2?' lowstock':'')+'"><div class="nm">'+esc(r.fabricType)+'</div>'+
+      '<div class="n">'+r.avail+' <span style="font-size:13px;color:#ffffff;">ม้วน</span></div></div>').join('')
+      :'<div class="empty">ยังไม่มีข้อมูลม้วนผ้า</div>';
+
+    ['fabRecSel','retFreeFabSel','cutFreeFabSel','sewFreeFabSel','cutFabSel','sewFabSel','retFabSel','wasteFabSel'].forEach(id=>{
+      const keep=$(id).value;
+      const allowNew=(id==='fabRecSel'||id==='retFreeFabSel'||id==='cutFreeFabSel'||id==='sewFreeFabSel');
+      $(id).innerHTML=(allowNew?'<option value="">— เลือกชนิดผ้า —</option>':'<option value="">— เลือก —</option>')+
+        types.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('')+
+        (allowNew?'<option value="__new__">+ พิมพ์ชนิดใหม่…</option>':'');
+      if(types.includes(keep)||keep==='__new__') $(id).value=keep;
+    });
+    $('dlFabric').innerHTML=types.map(t=>'<option value="'+esc(t)+'"></option>').join('');
+    $('dlRetFreeFab').innerHTML=types.map(t=>'<option value="'+esc(t)+'"></option>').join('');
+    $('dlCutFreeFab').innerHTML=types.map(t=>'<option value="'+esc(t)+'"></option>').join('');
+    $('dlSewFreeFab').innerHTML=types.map(t=>'<option value="'+esc(t)+'"></option>').join('');
+    updateFabRecPreview();
+    refreshCutRollOptions();
+
+    if(!$('cutRows').children.length) addCutRow();
+    if($('sewFreeMode').checked && !$('sewFreeRows').children.length) addSewFreeRow();
+    if($('retFreeMode').checked && !$('retFreeRows').children.length) addRetFreeRow();
+
+    const batchStatus=CALC.cutBatchStatus(S.cutBatches,S.sewSent,S.sewReturns,PROD.fabricWd);
+    const pipe=CALC.fabricPipelineV3(batchStatus);
+    $('tCutStock').innerHTML=pipe.length?'<tr><th>ชนิดผ้า</th><th>ไซซ์</th><th>ตัดได้</th><th>รอส่งเย็บ</th><th>อยู่ที่ช่างเย็บ</th><th>รับกลับแล้ว</th><th>เบิกไปผลิตแล้ว</th><th>พร้อมผลิต คงเหลือ</th></tr>'+
+      pipe.map(s=>'<tr><td>'+esc(s.fabricType)+'</td><td>'+esc(s.size)+'</td><td>'+s.cut+'</td><td>'+s.awaitingSewing+'</td><td>'+s.atSewing+'</td><td>'+s.returned+
+        '</td><td>'+s.used+'</td><td><b style="color:'+(s.readyStock<10?'var(--red)':'var(--accent2)')+'">'+s.readyStock+'</b></td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีการตัดผ้า</td></tr>';
+
+    $('tBatchStatus').innerHTML=batchStatus.length?'<tr><th>ถุง #</th><th>ชนิดผ้า</th><th>ไซซ์</th><th>ตัดได้</th><th>รอส่งเย็บ</th><th>ที่ช่างเย็บ</th><th>รับกลับ</th><th>เบิกแล้ว</th><th>พร้อมผลิต</th><th></th></tr>'+
+      batchStatus.slice().sort((a,b)=>b.time<a.time?-1:1).map(b=>'<tr><td>#'+b.batchNo+'</td><td>'+esc(b.fabricType)+'</td><td>'+esc(b.size)+'</td><td>'+b.qtyCut+
+        '</td><td>'+b.cutBalance+'</td><td>'+b.sewingBalance+'</td><td>'+b.returned+'</td><td>'+b.withdrawn+'</td><td><b style="color:'+(b.readyBalance>0?'var(--accent2)':'var(--dim)')+'">'+b.readyBalance+'</b></td>'+
+        '<td><button class="ed" data-btadj="'+b.batchId+'">ปรับยอดคงเหลือ</button> <button class="x" data-btrm="'+b.batchId+'">✕</button></td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีการตัดผ้า</td></tr>';
+    $('tBatchStatus').querySelectorAll('[data-btadj]').forEach(btn=>btn.onclick=async()=>{
+      const b=batchStatus.find(x=>x.batchId===btn.dataset.btadj); if(!b) return;
+      const input=await askText2('ปรับ "จำนวนที่ตัดได้" ของถุง #'+b.batchNo+' ('+b.fabricType+' '+b.size+') เป็นเท่าไหร่ (ชิ้น)\n\nตอนนี้ตัดไว้ '+b.qtyCut+' ชิ้น', b.qtyCut);
+      if(input===null) return;
+      const newQty=+input; if(isNaN(newQty)||newQty<0){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
+      const batch=S.cutBatches.find(x=>x.id===b.batchId); if(!batch) return;
+      batch.qtyCut=newQty;
+      await saveFabric(); rFabric(); toast('ปรับยอดถุง #'+b.batchNo+' เป็น '+newQty+' ชิ้น แล้ว');
+    });
+    $('tBatchStatus').querySelectorAll('[data-btrm]').forEach(btn=>btn.onclick=async()=>{
+      const b=batchStatus.find(x=>x.batchId===btn.dataset.btrm); if(!b) return;
+      if(b.withdrawn>0){ toast('ลบไม่ได้ — ถุงนี้ถูกเบิกไปผลิตแล้วบางส่วน ต้องไปลบรายการเบิกที่แอพผลิตก่อน'); return; }
+      const linkedSent=S.sewSent.filter(s=>s.batchId===b.batchId).length;
+      const linkedRet=S.sewReturns.filter(s=>s.batchId===b.batchId).length;
+      const warnExtra=(linkedSent||linkedRet)?('\n\nจะลบประวัติส่งเย็บ '+linkedSent+' รายการ และรับกลับ '+linkedRet+' รายการ ที่ผูกกับถุงนี้ไปด้วย'):'';
+      if(!await ask('ลบถุง #'+b.batchNo+' ('+b.fabricType+' '+b.size+') ทิ้งทั้งหมด?', 'การลบนี้กู้คืนไม่ได้'+warnExtra)) return;
+      S.cutBatches=S.cutBatches.filter(x=>x.id!==b.batchId);
+      S.sewSent=S.sewSent.filter(s=>s.batchId!==b.batchId);
+      S.sewReturns=S.sewReturns.filter(s=>s.batchId!==b.batchId);
+      await saveFabric(); rFabric(); toast('ลบถุง #'+b.batchNo+' แล้ว');
+    });
+
+    const rollStatus=CALC.rollStatus(S.fabricReceipts,S.cuts,S.cutBatches);
+    $('tRollStatus').innerHTML=rollStatus.length?'<tr><th>ชนิดผ้า</th><th>ม้วนที่</th><th>หน้ากว้าง×ยาว</th><th>เหลือ (นิ้ว)</th><th>วันที่รับ</th><th>สถานะ</th><th></th></tr>'+
+      rollStatus.slice().reverse().map(r=>'<tr><td>'+esc(r.fabricType)+'</td><td>'+r.rollNo+'</td>'+
+        '<td>'+(r.widthIn&&r.lengthIn?r.widthIn+'นิ้ว×'+r.lengthIn+'นิ้ว':'—')+'</td>'+
+        '<td>'+(r.remainLen!=null?'<b style="color:'+(r.remainLen<=0?'var(--red)':'var(--accent2)')+'">'+r.remainLen+'</b>':'—')+'</td>'+
+        '<td>'+ymd(r.dateReceived)+'</td><td>'+
+        (r.retired?'<span class="bdg bad">ตัดหมดแล้ว</span>':r.used?'<span class="bdg warn">ตัดแล้ว</span>':'<span class="bdg ok">ยังไม่ตัด</span>')+
+        '</td><td>'+(!r.used&&!r.retired?'<button class="btn sec sm" data-retire="'+r.fabricType+'|'+r.rollNo+'">ตัดหมดแล้ว</button> <button class="x" data-rollrm="'+r.fabricType+'|'+r.rollNo+'">✕</button>':
+          r.retired?'<button class="ed" data-unretire="'+r.fabricType+'|'+r.rollNo+'">ยกเลิก</button>':
+          '<span style="color:var(--dim); font-size:11px;">ลบที่ "ประวัติการตัด" ด้านล่างก่อน แล้วม้วนนี้จะลบได้เอง</span>')+'</td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';
+    $('tRollStatus').querySelectorAll('[data-retire]').forEach(b=>b.onclick=async()=>{
+      const [ft,rn]=b.dataset.retire.split('|');
+      if(!await ask('ยืนยันว่าม้วนที่ '+rn+' ('+ft+') ตัดหมดแล้ว?\n\nจะตัดออกจากรายการม้วนที่เลือกตัดได้ทันที')) return;
+      const r=S.fabricReceipts.find(x=>x.fabricType===ft && String(x.rollNo)===rn);
+      if(r){ r.retired=true; await saveFabric(); rFabric(); toast('บันทึกว่าม้วนที่ '+rn+' ตัดหมดแล้ว'); }
+    });
+    $('tRollStatus').querySelectorAll('[data-unretire]').forEach(b=>b.onclick=async()=>{
+      const [ft,rn]=b.dataset.unretire.split('|');
+      const r=S.fabricReceipts.find(x=>x.fabricType===ft && String(x.rollNo)===rn);
+      if(r){ delete r.retired; await saveFabric(); rFabric(); toast('ยกเลิกสถานะตัดหมดแล้ว — เลือกตัดได้อีกครั้ง'); }
+    });
+    $('tRollStatus').querySelectorAll('[data-rollrm]').forEach(b=>b.onclick=async()=>{
+      const [ft,rn]=b.dataset.rollrm.split('|');
+      if(!await ask('ลบม้วนที่ '+rn+' ('+ft+') ออกจากสต๊อกเลย?')) return;
+      S.fabricReceipts=S.fabricReceipts.filter(x=>!(x.fabricType===ft && String(x.rollNo)===rn));
+      await saveFabric(); rFabric(); toast('ลบแล้ว');
+    });
+
+    const sizes=allSizes();
+    ['sewSizeSel','retSizeSel'].forEach(id=>{ const _el=$(id); const _prev=_el.value; _el.innerHTML='<option value="">— เลือกไซซ์ —</option>'+sizes.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join(''); if(_prev && sizes.indexOf(_prev)>=0){ _el.value=_prev; } });
+    if(!$('sewTime').value) $('sewTime').value=localISO().slice(0,16);
+    if(!$('retDate').value) $('retDate').value=todayStr();
+    if(!$('fabRecDate').value) $('fabRecDate').value=todayStr();
+
+    function refreshBatchSel(selId, fabId, sizeId, balanceKey, labelSuffix){
+      const sel=$(selId); if(!sel) return;
+      const fab=$(fabId).value, size=$(sizeId).value;
+      const opts=batchStatus.filter(b=>b.fabricType===fab && b.size===size && b[balanceKey]>0);
+      const _needPick = !fab || !size;
+      sel.innerHTML=opts.length?opts.map(b=>'<option value="'+b.batchId+'">ถุง #'+b.batchNo+' — '+esc(b.size||'')+' (เหลือ'+labelSuffix+' '+b[balanceKey]+' ชิ้น)</option>').join('')
+        :'<option value="">'+(_needPick?'— เลือกชนิดผ้าและไซซ์ก่อน —':'— ไม่มีถุงที่พร้อม'+labelSuffix+' —')+'</option>';
+    }
+    refreshBatchSel('sewBatchSel','sewFabSel','sewSizeSel','cutBalance','ส่ง');
+    refreshBatchSel('retBatchSel','retFabSel','retSizeSel','sewingBalance','รับ');
+
+    $('tWaste').innerHTML=S.waste.length?'<tr><th>เวลา</th><th>ชนิดผ้า</th><th>หน่วย</th><th>จำนวน</th><th>สาเหตุ</th><th></th></tr>'+
+      S.waste.slice().reverse().map(w=>'<tr><td>'+ymd(w.time)+'</td><td>'+esc(w.fabricType)+'</td><td>'+(w.unit==='roll'?'ม้วน':'ชิ้น')+'</td><td>'+w.qty+'</td><td>'+esc(w.reason||'')+'</td><td><button class="x" data-wd="'+w.id+'">✕</button></td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีของเสีย</td></tr>';
+    $('tWaste').querySelectorAll('[data-wd]').forEach(b=>b.onclick=async()=>{ if(!await ask('ลบรายการของเสียนี้?'))return; S.waste=S.waste.filter(x=>x.id!==b.dataset.wd); await saveFabric(); rFabric(); toast('ลบแล้ว'); });
+
+    $('tCutHist').innerHTML=S.cuts.length?'<tr><th>เวลา</th><th>ชนิดผ้า</th><th>ม้วนที่</th><th>รายละเอียด</th><th></th></tr>'+
+      S.cuts.slice().reverse().map(c=>'<tr><td>'+ymd(c.time)+' '+hhmm(c.time)+'</td><td>'+esc(c.fabricType)+'</td><td>'+(c.rollNo||'—')+
+        '</td><td>'+(c.rows||[]).map(r=>esc(r.size)+' '+r.qty+'ชิ้น').join(', ')+'</td><td><button class="x" data-cd="'+c.id+'">✕</button></td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีการตัด</td></tr>';
+    $('tCutHist').querySelectorAll('[data-cd]').forEach(b=>b.onclick=async()=>{
+      if(!await ask('ลบรายการตัดนี้? (ถุงตัดที่เกิดจากรายการนี้จะลบไปด้วย ถ้ายังไม่มีการส่งเย็บ/เบิกไปแล้ว)')) return;
+      const cut=S.cuts.find(x=>x.id===b.dataset.cd);
+      S.cuts=S.cuts.filter(x=>x.id!==b.dataset.cd);
+      if(cut) S.cutBatches=S.cutBatches.filter(cb=>!(cb.fabricType===cut.fabricType && cb.rollNo===cut.rollNo && cut.time===cb.time));
+      await saveFabric(); rFabric(); toast('ลบแล้ว');
+    });
+
+    const allProdTypes=[...new Set([...S.sewSent,...S.sewReturns].map(x=>x.productType).filter(Boolean))].sort();
+    const keepSewType=$('sewTypeSel').value, keepRetType=$('retTypeSel').value;
+    ['sewTypeSel','retTypeSel'].forEach(id=>{
+      $(id).innerHTML='<option value="">— ไม่ระบุ —</option>'+allProdTypes.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('')+'<option value="__new__">+ พิมพ์ประเภทใหม่…</option>';
+    });
+    if(allProdTypes.includes(keepSewType)||keepSewType==='__new__') $('sewTypeSel').value=keepSewType;
+    if(allProdTypes.includes(keepRetType)||keepRetType==='__new__') $('retTypeSel').value=keepRetType;
+    $('dlProdType').innerHTML=allProdTypes.map(t=>'<option value="'+esc(t)+'"></option>').join('');
+
+    const allSewers=[...new Set([...S.sewSent,...S.sewReturns].map(x=>x.sewerName).filter(Boolean))].sort();
+    const keepSewName=$('sewNameSel').value, keepRetName=$('retNameSel').value;
+    ['sewNameSel','retNameSel'].forEach(id=>{
+      $(id).innerHTML='<option value="">— ไม่ระบุ —</option>'+allSewers.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('')+'<option value="__new__">+ พิมพ์ชื่อใหม่…</option>';
+    });
+    if(allSewers.includes(keepSewName)||keepSewName==='__new__') $('sewNameSel').value=keepSewName;
+    if(allSewers.includes(keepRetName)||keepRetName==='__new__') $('retNameSel').value=keepRetName;
+    $('dlSewerName').innerHTML=allSewers.map(n=>'<option value="'+esc(n)+'"></option>').join('');
+
+    const keepThSel=$('prodTypeThSel').value;
+    $('prodTypeThSel').innerHTML='<option value="">— เลือกประเภทสินค้า —</option>'+allProdTypes.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('');
+    if(allProdTypes.includes(keepThSel)) $('prodTypeThSel').value=keepThSel;
+    if($('fabTypeRenameSel')){
+      const fillSel=(id,list,ph)=>{
+        const el=$(id); if(!el) return;
+        const keep=el.value;
+        el.innerHTML='<option value="">'+ph+'</option>'+list.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('');
+        if(list.includes(keep)) el.value=keep;
+      };
+      const _ft=allFabricTypes(), _sz=allSizes();
+      fillSel('fabTypeRenameSel',_ft,'— เลือกชนิดผ้าที่จะแก้ชื่อ —');
+      fillSel('fabSizeRenameSel',_sz,'— เลือกไซซ์ที่จะแก้ —');
+      if($('fabDupWarn')){
+        const norm=x=>String(x).toLowerCase().replace(/[\s"']/g,'').replace(/[*×✕]/g,'x').replace(/cm|มม|มิล|นิ้ว/g,'');
+        const groups={};
+        _ft.concat(_sz).forEach(v=>{ const k=norm(v); (groups[k]=groups[k]||[]).push(v); });
+        const dups=Object.values(groups).filter(g=>g.length>1);
+        $('fabDupWarn').innerHTML = dups.length
+          ? '<span class="bdg warn">น่าจะเป็นอันเดียวกันแต่เขียนคนละแบบ: '+dups.map(g=>g.map(esc).join(' / ')).join(' · ')+' — แก้ให้เหมือนกันแล้วยอดจะรวมเป็นชุดเดียว</span>'
+          : '<span class="bdg ok">ชื่อผ้าและไซซ์ไม่มีที่เขียนซ้ำกัน</span>';
+      }
+    }
+    if($('prodTypeRenameSel')){
+      const keepRn=$('prodTypeRenameSel').value;
+      $('prodTypeRenameSel').innerHTML='<option value="">— เลือกประเภทที่จะแก้ชื่อ —</option>'+allProdTypes.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('');
+      if(allProdTypes.includes(keepRn)) $('prodTypeRenameSel').value=keepRn;
+    }
+
+    if($('prodTypeFilterBar')){
+      $('prodTypeFilterBar').innerHTML = prodTypeFilter
+        ? 'กำลังดูเฉพาะ: <b style="color:var(--accent2)">'+esc(prodTypeFilter)+'</b> <button class="x" id="btnClearProdTypeFilter">✕ ล้างตัวกรอง (ดูทั้งหมด)</button>'
+        : '';
+      if($('btnClearProdTypeFilter')) $('btnClearProdTypeFilter').onclick=()=>{ prodTypeFilter=null; rFabric(); };
+    }
+    const ptStock=CALC.productTypeStock(batchStatus, S.sewReturns);
+    $('prodTypeCards').innerHTML=allProdTypes.length?allProdTypes.map(t=>{
+      const total=CALC.productTypeTotal(ptStock,t);
+      const th=+S.prodTypeTh[t]||0, low=th>0&&total<th;
+      return '<div class="scard'+(low?' lowstock':'')+'" data-prodtypecard="'+esc(t)+'" style="cursor:pointer; display:inline-block; margin-right:8px;">'+
+        '<div class="nm">'+esc(t)+(low?' <span class="bdg bad">ใกล้หมด</span>':'')+'</div>'+
+        '<div class="n">'+total+' <span style="font-size:13px;color:#ffffff;">ชิ้น</span></div>'+
+        '<div class="l">'+(th>0?'เตือนต่ำกว่า '+th+' · ':'')+'แตะดูรายละเอียด ▾</div></div>';
+    }).join(''):'<div class="empty">ยังไม่มีการระบุประเภทสินค้า</div>';
+    $('prodTypeCards').querySelectorAll('[data-prodtypecard]').forEach(c=>c.onclick=()=>{
+      prodTypeFilter=c.dataset.prodtypecard; rFabric();
+      document.getElementById('prodTypeDetail').scrollIntoView({behavior:'smooth',block:'center'});
+    });
+    if(prodTypeFilter){
+      const rows=ptStock.filter(x=>x.productType===prodTypeFilter);
+      $('prodTypeDetail').innerHTML='<div class="scr"><table><tr><th>ชนิดผ้า</th><th>ไซซ์</th><th>มีกี่ชิ้น (พร้อมผลิต)</th></tr>'+
+        (rows.length?rows.map(r=>'<tr><td>'+esc(r.fabricType)+'</td><td>'+esc(r.size)+'</td><td><b style="color:var(--accent2)">'+r.qty+'</b></td></tr>').join('')
+          :'<tr><td class="empty" colspan="3">ประเภทนี้ยังไม่มีของพร้อมผลิต</td></tr>')+'</table></div>';
+    } else $('prodTypeDetail').innerHTML='';
+
+    let sewRows=S.sewSent.slice(), retRows=S.sewReturns.slice();
+    if(prodTypeFilter){ sewRows=sewRows.filter(s=>s.productType===prodTypeFilter); retRows=retRows.filter(s=>s.productType===prodTypeFilter); }
+
+    $('tSewHist').innerHTML=sewRows.length?'<tr><th>เวลา</th><th>ถุง #</th><th>ชนิดผ้า</th><th>ไซซ์</th><th>ประเภทสินค้า</th><th>จำนวน</th><th>ผู้เย็บ</th><th>หมายเหตุ</th><th></th></tr>'+
+      sewRows.slice().reverse().map(s=>'<tr><td>'+ymd(s.time)+' '+hhmm(s.time)+'</td><td>#'+(s.batchNo||'—')+'</td><td>'+esc(s.fabricType)+'</td><td>'+esc(s.size)+'</td><td>'+esc(s.productType||'—')+'</td><td>'+s.qty+'</td><td>'+esc(s.sewerName||'—')+'</td><td>'+esc(s.note||'')+'</td><td><button class="x" data-ss="'+s.id+'">✕</button></td></tr>').join('')
+      :'<tr><td class="empty">'+(prodTypeFilter?'ประเภทนี้ยังไม่มีรายการ':'ยังไม่มีการส่งเย็บ')+'</td></tr>';
+    $('tSewHist').querySelectorAll('[data-ss]').forEach(b=>b.onclick=async()=>{ if(!await ask('ลบรายการส่งเย็บนี้? (ยอดที่ถุงจะกลับมาเป็นรอส่งใหม่)'))return; S.sewSent=S.sewSent.filter(x=>x.id!==b.dataset.ss); await saveFabric(); rFabric(); toast('ลบแล้ว'); });
+
+    $('tRetHist').innerHTML=retRows.length?'<tr><th>วันที่</th><th>ถุง #</th><th>ชนิดผ้า</th><th>ไซซ์</th><th>ประเภทสินค้า</th><th>รับมา</th><th>ผู้เย็บ</th><th>หมายเหตุ</th><th></th></tr>'+
+      retRows.slice().reverse().map(s=>'<tr><td>'+ymd(s.time)+'</td><td>#'+(s.batchNo||'—')+'</td><td>'+esc(s.fabricType)+'</td><td>'+esc(s.size)+'</td><td>'+esc(s.productType||'—')+'</td><td>'+s.qty+'</td><td>'+esc(s.sewerName||'—')+'</td><td>'+esc(s.note||'')+'</td><td><button class="x" data-sr="'+s.id+'">✕</button></td></tr>').join('')
+      :'<tr><td class="empty">'+(prodTypeFilter?'ประเภทนี้ยังไม่มีรายการ':'ยังไม่มีการรับกลับ')+'</td></tr>';
+    $('tRetHist').querySelectorAll('[data-sr]').forEach(b=>b.onclick=async()=>{ if(!await ask('ลบรายการรับกลับนี้? (ของพร้อมผลิตจะลดลงตามยอดนี้)'))return; S.sewReturns=S.sewReturns.filter(x=>x.id!==b.dataset.sr); await saveFabric(); rFabric(); toast('ลบแล้ว'); });
+
+    $('tFabWdHist').innerHTML=PROD.fabricWd.length?'<tr><th>เวลา</th><th>ชนิดผ้า</th><th>ไซซ์</th><th>จำนวน</th><th>หยิบจากถุง</th></tr>'+
+      PROD.fabricWd.slice().reverse().map(w=>'<tr><td>'+ymd(w.time)+' '+hhmm(w.time)+'</td><td>'+esc(w.fabricType)+'</td><td>'+esc(w.size)+'</td><td>'+w.qty+
+        '</td><td>'+(w.picks||[]).map(p=>'#'+p.batchNo+':'+p.qty).join(', ')+'</td><td>'+esc(w.note||'')+'</td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีการเบิก</td></tr>';
+  }
+  function updateFabRecPreview(){
+    const n=($('fabRecSel').value==='__new__')?$('fabRecName').value.trim():$('fabRecSel').value;
+    $('fabRecPreview').textContent = n ? 'ม้วนจะได้เลขเริ่มจาก: ม้วนที่ '+CALC.nextRollNo(S.fabricReceipts,n)+' เป็นต้นไป' : '';
+  }
+  $('fabRecSel').onchange=function(){ const v=this.value,t=$('fabRecName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} updateFabRecPreview(); };
+  $('fabRecName').oninput=updateFabRecPreview;
+  $('btnFabRec').onclick=async()=>{
+    const n=($('fabRecSel').value==='__new__'?$('fabRecName').value:$('fabRecSel').value).trim();
+    const nRolls=+$('fabRecRolls').value;
+    if(!n||!nRolls){ toast('กรอกชนิดผ้าและจำนวนม้วน'); return; }
+    const customStart=$('fabRecRollNo').value.trim();
+    let start=customStart?+customStart:CALC.nextRollNo(S.fabricReceipts,n);
+    if(customStart){
+      const overlap=[]; for(let i=0;i<nRolls;i++){ if(S.fabricReceipts.some(r=>r.fabricType===n && r.rollNo===start+i)) overlap.push(start+i); }
+      if(overlap.length && !await ask('เลขม้วน #'+overlap.join(', #')+' ('+n+') มีอยู่แล้วในระบบ','ยืนยันจะสร้างม้วนใหม่เลขซ้ำกันหรือไม่? (แนะนำให้เว้นว่างให้ระบบเรียงเลขใหม่แทน)')) return;
+    }
+    const dateVal=$('fabRecDate').value?$('fabRecDate').value+'T'+localISO().slice(11):localISO();
+    const widthIn=+$('fabRecWidth').value||null, lengthIn=+$('fabRecLength').value||null;
+    for(let i=0;i<nRolls;i++){
+      S.fabricReceipts.push({id:uid(),time:dateVal,fabricType:n,rollNo:start+i,widthIn,lengthIn,note:$('fabRecNote').value.trim()});
+    }
+    await saveFabric();
+    $('fabRecRolls').value=''; $('fabRecNote').value=''; $('fabRecRollNo').value='';
+    // ชนิดผ้า+วันที่ค้างไว้ จนกว่าจะเปลี่ยนเอง (มักรับเข้าม้วนเดิมหลายรอบติดกัน)
+    rFabric(); toast('รับเข้า '+nRolls+' ม้วน — เลข '+start+' ถึง '+(start+nRolls-1));
+  };
+
+  function refreshCutRollOptions(){
+    const fab=$('cutFabSel').value;
+    const avail=fab?CALC.availableRolls(S.fabricReceipts,S.cuts,fab):[];
+    $('cutRollSel').innerHTML=avail.length?avail.map(r=>'<option value="'+r.rollNo+'">ม้วนที่ '+r.rollNo+' (รับ '+ymd(r.time)+')</option>').join('')
+      :'<option value="">— ไม่มีม้วนว่างของชนิดนี้ —</option>';
+  }
+  $('cutFabSel').onchange=refreshCutRollOptions;
+  $('cutFreeMode').onchange=function(){
+    const free=this.checked;
+    $('cutBatchModeRow').style.display=free?'none':'flex';
+    $('cutFreeModeRow').style.display=free?'flex':'none';
+  };
+  $('cutFreeFabSel').onchange=function(){ const v=this.value,t=$('cutFreeFabName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} };
+  ['sewFabSel','sewSizeSel'].forEach(id=>$(id).onchange=()=>rFabric());
+  ['retFabSel','retSizeSel'].forEach(id=>$(id).onchange=()=>rFabric());
+  $('sewBatchSel').onchange=function(){
+    const opt=this.selectedOptions[0]; if(!opt) return;
+    const m=/เหลือส่ง (\d+)/.exec(opt.textContent); if(m) $('sewQty').value=m[1];
+  };
+  $('retBatchSel').onchange=function(){
+    const opt=this.selectedOptions[0]; if(!opt) return;
+    const m=/เหลือรับ (\d+)/.exec(opt.textContent); if(m) $('retQty').value=m[1];
+  };
+
+  function addCutRow(size,qty){
+    const d=document.createElement('div'); d.className='frow';
+    d.innerHTML='<input class="cs" placeholder="ไซซ์ (ซม.) เช่น 18.5x28" value="'+esc(size||'')+'">'+
+      '<input class="cq" type="number" inputmode="numeric" placeholder="ชิ้น" style="max-width:90px;" value="'+(qty==null?'':qty)+'">'+
+      '<button class="x">✕</button>';
+    d.querySelector('.x').onclick=()=>d.remove();
+    $('cutRows').appendChild(d);
+  }
+  /* กด "+ เพิ่มไซซ์" แล้วให้ไซซ์ล่าสุดค้างไว้ในแถวใหม่ ไม่ต้องพิมพ์ซ้ำ */
+  function lastSizeIn(containerId){
+    const c=$(containerId); if(!c) return null;
+    const rows=c.querySelectorAll('.frow'); if(!rows.length) return null;
+    const inp=rows[rows.length-1].querySelector('input');
+    return inp && inp.value ? inp.value : null;
+  }
+  $('btnAddCutRow').onclick=()=>addCutRow(lastSizeIn('cutRows'));
+  $('btnCut').onclick=async()=>{
+    const isFree=$('cutFreeMode').checked;
+    const fab=isFree?($('cutFreeFabSel').value==='__new__'?$('cutFreeFabName').value:$('cutFreeFabSel').value).trim():$('cutFabSel').value;
+    const rollNo=isFree?(+$('cutFreeRollNo').value||null):+$('cutRollSel').value;
+    if(!fab){ toast('เลือกชนิดผ้าก่อน'); return; }
+    if(!isFree && !rollNo){ toast('เลือกม้วนที่จะตัด — ถ้าไม่มีม้วนว่าง ต้องไปรับเข้าม้วนผ้าก่อน'); return; }
+    const rows=Array.from(document.querySelectorAll('#cutRows .frow')).map(r=>({ size:normSize(r.querySelector('.cs').value), qty:+r.querySelector('.cq').value||0 })).filter(r=>r.size&&r.qty);
+    if(!rows.length){ toast('กรอกไซซ์และจำนวนอย่างน้อย 1 แถว'); return; }
+    const t=localISO();
+    const customStartBatchNo=isFree?$('cutFreeBatchNo').value.trim():'';
+    // ใช้เลขถุงที่กำหนดเองได้เฉพาะตอนกรอกอิสระและมีแค่ 1 ไซซ์ (หลายไซซ์มีเลขคนละชุดกัน กำหนดเลขเดียวรวมกันไม่ได้)
+    if(customStartBatchNo && rows.length>1) toast('มีหลายไซซ์ — ระบบจะเรียงเลขถุงอัตโนมัติให้ทุกไซซ์แทน (เลขที่กำหนดใช้ได้แค่ตอนมีไซซ์เดียว)');
+    if(!isFree) S.cuts.push({ id:uid(), time:t, fabricType:fab, rollNo, rows, note:$('cutNote').value.trim() });
+    const newBatchNos=[];
+    rows.forEach(row=>{
+      const useCustom = customStartBatchNo && rows.length===1;
+      const batchNo = useCustom ? +customStartBatchNo : CALC.nextCutBatchNo(S.cutBatches,fab,row.size);
+      S.cutBatches.push({ id:uid(), batchNo, fabricType:fab, size:row.size, qtyCut:row.qty, time:t, rollNo, note:isFree?'ยอดยกมา — ตัดอิสระ':$('cutNote').value.trim() });
+      newBatchNos.push(row.size+' → ถุง #'+batchNo);
+    });
+    await saveFabric();
+    $('cutRows').innerHTML=''; addCutRow(); $('cutNote').value=''; $('cutFreeBatchNo').value='';
+    rFabric(); toast((isFree?'บันทึกยอดยกมาแล้ว':'บันทึกการตัดผ้าแล้ว')+' — ได้ '+newBatchNos.join(', '));
+  };
+  let lastSewFreeSize='';
+  function addSewFreeRow(size,qty){
+    const d=document.createElement('div'); d.className='frow';
+    d.innerHTML='<input class="sfs" placeholder="ไซซ์ (ซม.) เช่น 18.5x28" value="'+esc(size!=null?size:lastSewFreeSize)+'">'+
+      '<input class="sfq" type="number" inputmode="numeric" placeholder="ชิ้น" style="max-width:90px;" value="'+(qty==null?'':qty)+'">'+
+      '<button class="x">✕</button>';
+    d.querySelector('.x').onclick=()=>{ if($('sewFreeRows').children.length>1) d.remove(); };
+    $('sewFreeRows').appendChild(d);
+  }
+  $('btnAddSewFreeRow').onclick=()=>addSewFreeRow(lastSizeIn('sewFreeRows'));
+  $('sewTypeSel').onchange=function(){ const v=this.value,t=$('sewTypeName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} };
+  $('sewNameSel').onchange=function(){ const v=this.value,t=$('sewName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} };
+  $('retNameSel').onchange=function(){ const v=this.value,t=$('retName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} };
+  $('sewFreeMode').onchange=function(){
+    const free=this.checked;
+    $('sewBatchModeRow').style.display=free?'none':'flex';
+    $('sewBatchSelLabel').style.display=free?'none':'block';
+    $('sewBatchSel').style.display=free?'none':'block';
+    $('sewFreeModeRow').style.display=free?'flex':'none';
+    $('sewFreeRowsWrap').style.display=free?'block':'none';
+    $('sewFreeBatchRow').style.display=free?'flex':'none';
+    $('sewQtyRow').style.display=free?'none':'flex';
+    if(free && !$('sewFreeRows').children.length) addSewFreeRow();
+  };
+  $('sewFreeFabSel').onchange=function(){ const v=this.value,t=$('sewFreeFabName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} };
+  $('btnSew').onclick=async()=>{
+    const productType=normSize($('sewTypeSel').value==='__new__'?$('sewTypeName').value:$('sewTypeSel').value);
+    const sewerName=($('sewNameSel').value==='__new__'?$('sewName').value:$('sewNameSel').value).trim();
+    const timeVal=$('sewTime').value?$('sewTime').value+':00':localISO();
+    if($('sewFreeMode').checked){
+      const fab=($('sewFreeFabSel').value==='__new__'?$('sewFreeFabName').value:$('sewFreeFabSel').value).trim();
+      if(!fab){ toast('กรอกชนิดผ้าก่อน'); return; }
+      const rows=Array.from(document.querySelectorAll('#sewFreeRows .frow')).map(r=>({ size:normSize(r.querySelector('.sfs').value), qty:+r.querySelector('.sfq').value||0 })).filter(r=>r.size&&r.qty);
+      if(!rows.length){ toast('กรอกไซซ์และจำนวนอย่างน้อย 1 แถว'); return; }
+      /* เตือนถ้ามีถุงตัดจริงของผ้า+ไซซ์นี้รออยู่แล้ว จะได้ไม่ลงซ้ำจนยอด "ตัดได้" บวมเกินจริง */
+      try{
+        const _bs=CALC.cutBatchStatus(S.cutBatches,S.sewSent,S.sewReturns,PROD.fabricWd);
+        const _dupe=rows.map(function(row){
+          const hit=_bs.filter(function(b){ return b.fabricType===fab && b.size===row.size && b.cutBalance>0; });
+          const sum=hit.reduce(function(a,b){ return a+b.cutBalance; },0);
+          return sum>0 ? (row.size+' — มีถุง '+hit.map(function(b){return '#'+b.batchNo;}).join(', ')+' รออยู่ '+sum+' ชิ้น') : null;
+        }).filter(Boolean);
+        if(_dupe.length){
+          if(!await ask('ไซซ์นี้มีถุงตัดจริงรออยู่แล้ว', _dupe.join('\n')+'\n\nถ้ากดยืนยัน ระบบจะสร้างถุงใหม่เพิ่ม (ยอด "ตัดได้" จะรวมกัน)\nถ้าต้องการหักจากถุงเดิม ให้เอาติ๊ก "กรอกอิสระ" ออก แล้วเลือกถุงจากรายการแทน')) return;
+        }
+      }catch(e){}
+      const customStartBatchNo=$('sewFreeBatchNo').value.trim();
+      if(customStartBatchNo && rows.length>1) toast('มีหลายไซซ์ — ระบบจะเรียงเลขถุงอัตโนมัติให้ทุกไซซ์แทน (เลขที่กำหนดใช้ได้แค่ตอนมีไซซ์เดียว)');
+      const newBatchNos=[];
+      rows.forEach(row=>{
+        const useCustom=customStartBatchNo && rows.length===1;
+        const batchNo=useCustom?+customStartBatchNo:CALC.nextCutBatchNo(S.cutBatches,fab,row.size);
+        const newBatch={ id:uid(), batchNo, fabricType:fab, size:row.size, qtyCut:row.qty, time:timeVal, rollNo:null, note:'ยอดยกมา — ส่งเย็บอิสระ' };
+        S.cutBatches.push(newBatch);
+        S.sewSent.push({ id:uid(), time:timeVal, batchId:newBatch.id, batchNo, fabricType:fab, size:row.size, productType, qty:row.qty, sewerName, note:$('sewNote').value.trim()||'ยอดยกมา — ส่งเย็บอิสระ' });
+        newBatchNos.push(row.size+' → ถุง #'+batchNo);
+      });
+      await saveFabric();
+      // ไซซ์ล่าสุดค้างไว้เป็นค่าเริ่มต้นของแถวถัดไป จนกว่าจะเปลี่ยนเอง
+      lastSewFreeSize=rows[rows.length-1].size;
+      /* ชื่อผู้เย็บค้างไว้ */ $('sewNote').value=''; $('sewFreeBatchNo').value='';
+      $('sewFreeRows').innerHTML=''; addSewFreeRow();
+      rFabric(); toast('บันทึกยอดยกมาแล้ว — '+newBatchNos.join(', '));
+      return;
+    }
+    const qty=+$('sewQty').value;
+    if(!qty){ toast('กรอกจำนวนที่ส่ง'); return; }
+    const batchId=$('sewBatchSel').value;
+    if(!batchId){ toast('เลือกถุงตัดที่จะส่งเย็บก่อน'); return; }
+    const batch=S.cutBatches.find(b=>b.id===batchId); if(!batch){ toast('ไม่พบถุงนี้'); return; }
+    const status=CALC.cutBatchStatus(S.cutBatches,S.sewSent,S.sewReturns,PROD.fabricWd).find(b=>b.batchId===batchId);
+    if(qty>status.cutBalance && !await ask('ถุง #'+batch.batchNo+' เหลือรอส่งอยู่ '+status.cutBalance+' ชิ้น แต่กรอก '+qty+' ชิ้น\n\nยืนยันจะส่งเกินยอดที่มีหรือไม่?')) return;
+    S.sewSent.push({ id:uid(), time:timeVal, batchId, batchNo:batch.batchNo,
+      fabricType:batch.fabricType, size:batch.size, productType, qty, sewerName, note:$('sewNote').value.trim() });
+    await saveFabric(); $('sewQty').value=''; /* ชื่อผู้เย็บค้างไว้ */ $('sewNote').value='';
+    // ประเภทสินค้าที่เลือกไว้ค้างต่อเนื่อง จนกว่าจะเปลี่ยนเอง
+    rFabric(); toast('บันทึกส่งเย็บถุง #'+batch.batchNo+' แล้ว');
+  };
+  let lastRetFreeSize='';
+  function addRetFreeRow(size,qty){
+    const d=document.createElement('div'); d.className='frow';
+    d.innerHTML='<input class="rfs" placeholder="ไซซ์ (ซม.) เช่น 18.5x28" value="'+esc(size!=null?size:lastRetFreeSize)+'">'+
+      '<input class="rfq" type="number" inputmode="numeric" placeholder="ชิ้น" style="max-width:90px;" value="'+(qty==null?'':qty)+'">'+
+      '<button class="x">✕</button>';
+    d.querySelector('.x').onclick=()=>{ if($('retFreeRows').children.length>1) d.remove(); };
+    $('retFreeRows').appendChild(d);
+  }
+  $('btnAddRetFreeRow').onclick=()=>addRetFreeRow(lastSizeIn('retFreeRows'));
+  $('retFreeMode').onchange=function(){
+    const free=this.checked;
+    $('retBatchModeRow').style.display=free?'none':'flex';
+    $('retBatchSelLabel').style.display=free?'none':'block';
+    $('retBatchSel').style.display=free?'none':'block';
+    $('retFreeModeRow').style.display=free?'flex':'none';
+    $('retFreeRowsWrap').style.display=free?'block':'none';
+    $('retFreeBatchRow').style.display=free?'flex':'none';
+    $('retQtyRow').style.display=free?'none':'flex';
+    if(free && !$('retFreeRows').children.length) addRetFreeRow();
+  };
+  $('retFreeFabSel').onchange=function(){ const v=this.value,t=$('retFreeFabName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} };
+  $('retTypeSel').onchange=function(){ const v=this.value,t=$('retTypeName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} };
+  $('btnRet').onclick=async()=>{
+    const dateVal=$('retDate').value?$('retDate').value+'T'+localISO().slice(11):localISO();
+    const productType=normSize($('retTypeSel').value==='__new__'?$('retTypeName').value:$('retTypeSel').value);
+    const sewerName=($('retNameSel').value==='__new__'?$('retName').value:$('retNameSel').value).trim();
+    if($('retFreeMode').checked){
+      const fab=($('retFreeFabSel').value==='__new__'?$('retFreeFabName').value:$('retFreeFabSel').value).trim();
+      if(!fab){ toast('กรอกชนิดผ้าก่อน'); return; }
+      const rows=Array.from(document.querySelectorAll('#retFreeRows .frow')).map(r=>({ size:normSize(r.querySelector('.rfs').value), qty:+r.querySelector('.rfq').value||0 })).filter(r=>r.size&&r.qty);
+      if(!rows.length){ toast('กรอกไซซ์และจำนวนอย่างน้อย 1 แถว'); return; }
+      const customStartBatchNo=$('retFreeBatchNo').value.trim();
+      if(customStartBatchNo && rows.length>1) toast('มีหลายไซซ์ — ระบบจะเรียงเลขถุงอัตโนมัติให้ทุกไซซ์แทน (เลขที่กำหนดใช้ได้แค่ตอนมีไซซ์เดียว)');
+      const newBatchNos=[];
+      rows.forEach(row=>{
+        const useCustom=customStartBatchNo && rows.length===1;
+        const batchNo=useCustom?+customStartBatchNo:CALC.nextCutBatchNo(S.cutBatches,fab,row.size);
+        // สร้างถุงตัดจำลองให้ครบวงจร (ตัด→ส่งเย็บ→รับกลับ เท่ากันหมด) เพื่อให้เข้าสถานะ "พร้อมผลิต" ทันทีโดยไม่ต้องมีถุงตัดจริงอ้างอิง
+        const newBatch={ id:uid(), batchNo, fabricType:fab, size:row.size, qtyCut:row.qty, time:dateVal, rollNo:null, note:'ยอดยกมา — รับกลับอิสระ' };
+        S.cutBatches.push(newBatch);
+        S.sewSent.push({ id:uid(), time:dateVal, batchId:newBatch.id, batchNo, fabricType:fab, size:row.size, productType, qty:row.qty, sewerName, note:'ยอดยกมา' });
+        S.sewReturns.push({ id:uid(), time:dateVal, batchId:newBatch.id, batchNo, fabricType:fab, size:row.size, productType, qty:row.qty, sewerName, note:$('retNote').value.trim()||'ยอดยกมา — รับกลับอิสระ' });
+        newBatchNos.push(row.size+' → ถุง #'+batchNo);
+      });
+      await saveFabric();
+      // ไซซ์ล่าสุดค้างไว้เป็นค่าเริ่มต้นของแถวถัดไป จนกว่าจะเปลี่ยนเอง
+      lastRetFreeSize=rows[rows.length-1].size;
+      /* ชื่อผู้เย็บค้างไว้ */ $('retNote').value=''; $('retFreeBatchNo').value='';
+      $('retFreeRows').innerHTML=''; addRetFreeRow();
+      // ประเภทสินค้า+ชนิดผ้าค้างไว้ จนกว่าจะเปลี่ยนเอง
+      rFabric(); toast('บันทึกยอดยกมาแล้ว — '+newBatchNos.join(', '));
+      return;
+    }
+    const qty=+$('retQty').value;
+    if(!qty){ toast('กรอกจำนวนที่รับกลับ'); return; }
+    const batchId=$('retBatchSel').value;
+    if(!batchId){ toast('เลือกถุงตัดที่จะรับกลับก่อน'); return; }
+    const batch=S.cutBatches.find(b=>b.id===batchId); if(!batch){ toast('ไม่พบถุงนี้'); return; }
+    const status=CALC.cutBatchStatus(S.cutBatches,S.sewSent,S.sewReturns,PROD.fabricWd).find(b=>b.batchId===batchId);
+    if(qty>status.sewingBalance){
+      await info('รับกลับเกินจำนวนที่ส่งเย็บไม่ได้','ถุง #'+batch.batchNo+' ('+batch.fabricType+' '+batch.size+') อยู่ที่ช่างเย็บ '+status.sewingBalance+' ชิ้น แต่กรอกรับกลับ '+qty+' ชิ้น\n\nถ้าของเกินมาจริง ให้ติ๊ก "กรอกอิสระ" แล้วลงเป็นรายการแยก ระบบจะได้ไม่ติดลบ');
+      return;
+    }
+    S.sewReturns.push({ id:uid(), time:dateVal, batchId, batchNo:batch.batchNo,
+      fabricType:batch.fabricType, size:batch.size, productType, qty, sewerName, note:$('retNote').value.trim() });
+    await saveFabric(); $('retQty').value=''; /* ชื่อผู้เย็บค้างไว้ */ $('retNote').value='';
+    // ประเภทสินค้าค้างไว้ จนกว่าจะเปลี่ยนเอง
+    rFabric(); toast('บันทึกรับกลับถุง #'+batch.batchNo+' แล้ว');
+  };
+  $('btnProdTypeTh').onclick=async()=>{
+    const t=$('prodTypeThSel').value; if(!t){ toast('เลือกประเภทสินค้าก่อน'); return; }
+    S.prodTypeTh[t]=+$('prodTypeThQty').value||0;
+    await saveFabric(); $('prodTypeThQty').value=''; rFabric(); toast('ตั้งจุดเตือนแล้ว');
+  };
+  $('btnProdTypeRename').onclick=async()=>{
+    const oldName=$('prodTypeRenameSel').value;
+    if(!oldName){ toast('เลือกประเภทสินค้าที่จะแก้ชื่อก่อน'); return; }
+    const n1=(S.sewSent||[]).filter(x=>x.productType===oldName).length;
+    const n2=(S.sewReturns||[]).filter(x=>x.productType===oldName).length;
+    const newNameRaw=await askText('แก้ไขชื่อประเภทสินค้า','ชื่อเดิม: '+oldName+'\nมีรายการส่งเย็บ '+n1+' รายการ และรับกลับ '+n2+' รายการที่จะย้ายตามไปด้วย',oldName);
+    if(newNameRaw==null) return;
+    const newName=normSize(newNameRaw);
+    if(!newName){ toast('ยังไม่ได้พิมพ์ชื่อใหม่'); return; }
+    if(newName===oldName) return;
+    const allTypes=new Set();
+    (S.sewSent||[]).forEach(x=>{if(x.productType)allTypes.add(x.productType)});
+    (S.sewReturns||[]).forEach(x=>{if(x.productType)allTypes.add(x.productType)});
+    if(allTypes.has(newName)){
+      if(!await ask('มีประเภท "'+newName+'" อยู่แล้ว','ถ้ายืนยัน ระบบจะรวมข้อมูลของ "'+oldName+'" เข้ากับ "'+newName+'" ทั้งหมด (ไม่มีข้อมูลหาย แต่จะรวมเป็นการ์ดเดียว)')) return;
+    }
+    (S.sewSent||[]).forEach(x=>{ if(x.productType===oldName) x.productType=newName; });
+    (S.sewReturns||[]).forEach(x=>{ if(x.productType===oldName) x.productType=newName; });
+    if(S.prodTypeTh && Object.prototype.hasOwnProperty.call(S.prodTypeTh,oldName)){
+      const v=S.prodTypeTh[oldName];
+      if(S.prodTypeTh[newName]==null) S.prodTypeTh[newName]=v;
+      delete S.prodTypeTh[oldName];
+    }
+    await saveFabric(); rFabric(); toast('เปลี่ยนชื่อเป็น "'+newName+'" แล้ว');
+  };
+  /* แก้ชื่อชนิดผ้า / ไซซ์ ให้ย้ายข้อมูลเก่าตามไปทั้งหมด ไม่มีอะไรหาย */
+  async function renameFabricField(field,label){
+    const sel=$(field==='fabricType'?'fabTypeRenameSel':'fabSizeRenameSel');
+    const oldName=sel?sel.value:'';
+    if(!oldName){ toast('เลือก'+label+'ที่จะแก้ก่อน'); return; }
+    const lists=[['รับเข้าผ้า',S.fabricReceipts],['ตัดผ้า',S.cuts],['ถุงที่ตัดไว้',S.cutBatches],
+                 ['ส่งเย็บ',S.sewSent],['รับกลับ',S.sewReturns],['ของเสีย',S.waste]];
+    const count=r=>{
+      if(field==='fabricType') return r.fabricType===oldName;
+      if(r.size===oldName) return true;
+      return Array.isArray(r.rows) && r.rows.some(x=>x.size===oldName);
+    };
+    const detail=lists.map(([n,a])=>[n,(a||[]).filter(count).length]).filter(x=>x[1]>0);
+    const total=detail.reduce((s,x)=>s+x[1],0);
+    const newRaw=await askText('แก้ไข'+label,'ของเดิม: '+oldName+'\nจะย้ายข้อมูลตามไปด้วย '+total+' รายการ ('+
+      (detail.map(x=>x[0]+' '+x[1]).join(', ')||'ไม่มี')+')\n\nถ้าพิมพ์ให้ตรงกับของที่มีอยู่แล้ว ระบบจะรวมเป็นชุดเดียวกันให้',oldName);
+    if(newRaw==null) return;
+    const newName=normSize(newRaw);
+    if(!newName){ toast('ยังไม่ได้พิมพ์ชื่อใหม่'); return; }
+    if(newName===oldName) return;
+    const existing=(field==='fabricType'?allFabricTypes():allSizes());
+    if(existing.includes(newName)){
+      if(!await ask('มี "'+newName+'" อยู่แล้ว','ยืนยันแล้วระบบจะรวมข้อมูลของ "'+oldName+'" เข้ากับ "'+newName+'" เป็นชุดเดียวกัน\n\nยอดทั้งหมดยังอยู่ครบ ไม่มีข้อมูลหาย')) return;
+    }
+    let n=0;
+    lists.forEach(([,a])=>(a||[]).forEach(r=>{
+      if(field==='fabricType'){ if(r.fabricType===oldName){ r.fabricType=newName; n++; } }
+      else {
+        if(r.size===oldName){ r.size=newName; n++; }
+        if(Array.isArray(r.rows)) r.rows.forEach(x=>{ if(x.size===oldName){ x.size=newName; n++; } });
+      }
+    }));
+    await saveFabric(); rFabric(); toast('แก้เป็น "'+newName+'" แล้ว ย้ายข้อมูล '+n+' รายการ');
+  }
+  if($('btnFabTypeRename')) $('btnFabTypeRename').onclick=()=>renameFabricField('fabricType','ชื่อชนิดผ้า');
+  if($('btnFabSizeRename')) $('btnFabSizeRename').onclick=()=>renameFabricField('size','ไซซ์');
+
+  $('btnWaste').onclick=async()=>{
+    const fab=$('wasteFabSel').value, qty=+$('wasteQty').value;
+    if(!fab||!qty){ toast('เลือกชนิดผ้าและกรอกจำนวน'); return; }
+    S.waste.push({ id:uid(), time:localISO(), fabricType:fab, unit:$('wasteUnit').value, qty, reason:$('wasteReason').value.trim() });
+    await saveFabric(); $('wasteQty').value=''; $('wasteReason').value=''; rFabric(); toast('บันทึกของเสียแล้ว');
+  };
+
+  /* ---------- 3. BAGS ---------- */
+  function allBagNames(kind){ const set=new Set(); S.sackReceipts.filter(r=>r.kind===kind).forEach(r=>set.add(r.name)); return Array.from(set).filter(Boolean).sort(); }
+  function rBag(){
+    if(!$('bagDate').value) $('bagDate').value=todayStr();
+    const sackStatus=CALC.sackStatus(S.sackReceipts,PROD.bagWd);
+    const zip=CALC.bagAggregate(sackStatus,'zip');
+    const pack=CALC.bagAggregate(sackStatus,'pack');
+    $('zipCards').innerHTML=zip.length?zip.map(z=>'<div class="scard'+(z.remainingKg<5?' lowstock':'')+'"><div class="nm">'+esc(z.name)+' <span class="bdg ok">ถุงซิล</span></div>'+
+      '<div class="n">'+z.remainingKg+' <span style="font-size:13px;color:#ffffff;">กก.</span></div><div class="l">≈ '+z.remainingPieces+' ใบ (รับเข้ารวม '+z.receivedKg+' กก.)</div></div>').join(''):'<div class="empty">ยังไม่มีข้อมูลถุงซิล</div>';
+    $('packCards').innerHTML=pack.length?pack.map(p=>'<div class="scard'+(p.remainingKg<5?' lowstock':'')+'"><div class="nm">'+esc(p.name)+' <span class="bdg warn">ถุงแพ็ค</span></div>'+
+      '<div class="n">'+p.remainingKg+' <span style="font-size:13px;color:#ffffff;">กก.</span></div><div class="l">≈ '+p.remainingPieces+' ใบ (รับเข้ารวม '+p.receivedKg+' กก.)</div></div>').join(''):'<div class="empty">ยังไม่มีข้อมูลถุงแพ็ค</div>';
+
+    const zn=allBagNames('zip'), pn=allBagNames('pack');
+    const curKind=$('bagKind').value;
+    const existing=curKind==='zip'?zn:pn;
+    const keepBagName=$('bagNameSel').value;
+    $('bagNameSel').innerHTML='<option value="">— เลือก —</option>'+existing.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('')+'<option value="__new__">+ พิมพ์ชื่อใหม่…</option>';
+    if(existing.includes(keepBagName)||keepBagName==='__new__') $('bagNameSel').value=keepBagName;
+    updateBagSackPreview();
+
+    $('tSackStatus').innerHTML=sackStatus.length?'<tr><th>กระสอบ #</th><th>ประเภท</th><th>ชื่อ</th><th>ไซซ์</th><th>น้ำหนักกระสอบ</th><th>เบิกแล้ว</th><th>คงเหลือ</th><th>≈ใบ</th><th></th></tr>'+
+      sackStatus.slice().sort((a,b)=>b.time<a.time?-1:1).map(s=>'<tr><td>#'+s.sackNo+'</td><td>'+(s.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+'</td><td>'+esc(s.name)+'</td><td>'+esc(s.size||'—')+
+        '</td><td>'+s.sackWeightKg+' กก.</td><td>'+s.used+' กก.</td><td><b style="color:'+(s.remainingKg>0?'var(--accent2)':'var(--dim)')+'">'+s.remainingKg+' กก.</b></td><td>'+s.remainingPieces+
+        '</td><td><button class="ed" data-skadj="'+s.sackId+'">ปรับยอดคงเหลือ</button></td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';
+    $('tSackStatus').querySelectorAll('[data-skadj]').forEach(btn=>btn.onclick=async()=>{
+      const s=sackStatus.find(x=>x.sackId===btn.dataset.skadj); if(!s) return;
+      const input=await askText2('ปรับยอดคงเหลือของกระสอบ #'+s.sackNo+' ('+s.name+') เป็นเท่าไหร่ (กก.)\n\nตอนนี้เหลือ '+s.remainingKg+' กก. (เบิกไปแล้ว '+s.used+' กก.)', s.remainingKg);
+      if(input===null) return;
+      const newRemaining=+input; if(isNaN(newRemaining)||newRemaining<0){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
+      const r=S.sackReceipts.find(x=>x.id===s.sackId); if(!r) return;
+      r.sackWeightKg=r3(s.used+newRemaining);
+      await saveBag(); rBag(); toast('ปรับยอดกระสอบ #'+s.sackNo+' เป็น '+newRemaining+' กก. แล้ว');
+    });
+
+    $('tBagHist').innerHTML=S.sackReceipts.length?'<tr><th>เวลา</th><th>ประเภท</th><th>ชื่อ</th><th>กระสอบ #</th><th>น้ำหนัก</th><th></th></tr>'+
+      S.sackReceipts.slice().reverse().map(r=>'<tr><td>'+ymd(r.time)+' '+hhmm(r.time)+'</td><td>'+(r.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+'</td><td>'+esc(r.name)+
+        '</td><td>#'+r.sackNo+'</td><td>'+r.sackWeightKg+' กก.</td><td><button class="x" data-bd="'+r.id+'">✕</button></td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';
+    $('tBagHist').querySelectorAll('[data-bd]').forEach(b=>b.onclick=async()=>{ const _r=S.sackReceipts.find(x=>x.id===b.dataset.bd)||{}; if(!await ask('ลบรายการรับเข้ากระสอบนี้?','ชื่อถุง: '+(_r.name||'-')+'\nเบอร์กระสอบ: #'+(_r.sackNo!=null?_r.sackNo:'-')+'\nน้ำหนัก: '+(_r.kg!=null?_r.kg:'-')+' กก.\nวันที่รับ: '+ymd(_r.time||'')))return; S.sackReceipts=S.sackReceipts.filter(x=>x.id!==b.dataset.bd); await saveBag(); rBag(); toast('ลบแล้ว'); });
+
+    const wdHist=PROD.bagWd.slice().reverse().slice(0,50);
+    $('tBagWdHist').innerHTML=wdHist.length?'<tr><th>เวลา</th><th>ประเภท</th><th>ชื่อ</th><th>จำนวน</th><th>หยิบจากกระสอบ</th></tr>'+
+      wdHist.map(w=>'<tr><td>'+(w.time||'').slice(0,16).replace('T',' ')+'</td><td>'+(w.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+'</td><td>'+esc(w.name)+'</td><td>'+w.kg+' กก.'+
+        '</td><td>'+(w.picks||[]).map(p=>'#'+p.sackNo+':'+p.take+'กก.').join(', ')+'</td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีการเบิก</td></tr>';
+  }
+  function updateBagSackPreview(){
+    const kind=$('bagKind').value;
+    const n=($('bagNameSel').value==='__new__')?$('bagNameNew').value.trim():$('bagNameSel').value;
+    $('bagSackPreview').textContent = n ? 'กระสอบถัดไปของ "'+n+'" จะเป็น: กระสอบ #'+CALC.nextSackNo(S.sackReceipts,kind,n) : '';
+  }
+  $('bagKind').onchange=rBag;
+  $('bagNameSel').onchange=function(){ const v=this.value,t=$('bagNameNew'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} updateBagSackPreview(); };
+  $('bagNameNew').oninput=updateBagSackPreview;
+  $('btnBag').onclick=async()=>{
+    const kind=$('bagKind').value;
+    const n=normSize($('bagNameSel').value==='__new__'?$('bagNameNew').value:$('bagNameSel').value);
+    const sackWeightKg=+$('bagSackKg').value||25, weightPerBag=+$('bagWeightPer').value||0;
+    if(!n||!sackWeightKg){ toast('กรอกชื่อถุงและน้ำหนักกระสอบ'); return; }
+    const customSackNo=$('bagSackNo').value.trim();
+    const sackNo=customSackNo?+customSackNo:CALC.nextSackNo(S.sackReceipts,kind,n);
+    if(customSackNo && S.sackReceipts.some(s=>s.kind===kind && s.name===n && s.sackNo===sackNo)){
+      if(!await ask('เลขกระสอบ #'+sackNo+' ('+n+') มีอยู่แล้วในระบบ','ยืนยันจะสร้างกระสอบใหม่เลขซ้ำกันหรือไม่? (แนะนำให้เว้นว่างให้ระบบเรียงเลขใหม่แทน)')) return;
+    }
+    const _w=[];
+    if(weightPerBag>0 && weightPerBag>=sackWeightKg) _w.push('น้ำหนักถุง 1 ใบ ('+weightPerBag+' กก.) มากกว่าหรือเท่ากับน้ำหนักทั้งกระสอบ ('+sackWeightKg+' กก.)');
+    if(weightPerBag>0 && weightPerBag>5) _w.push('ถุง 1 ใบหนัก '+weightPerBag+' กก. ดูผิดปกติ — เช็คจุดทศนิยมอีกที');
+    if(weightPerBag>0){
+      const pcs=CALC.sackPieces(sackWeightKg,weightPerBag);
+      if(pcs<3) _w.push('กระสอบนี้จะได้ถุงแค่ '+pcs+' ใบ ดูน้อยผิดปกติ');
+      if(pcs>200000) _w.push('กระสอบนี้จะได้ถุงถึง '+pcs+' ใบ ดูเยอะผิดปกติ');
+    }
+    if(sackWeightKg>200) _w.push('น้ำหนักกระสอบ '+sackWeightKg+' กก. ดูหนักผิดปกติ');
+    const _refW=lastOf(S.sackReceipts,x=>x.kind===kind&&x.name===n,'weightPerBag');
+    if(_refW>0 && weightPerBag>0 && (weightPerBag>_refW*3||weightPerBag<_refW/3))
+      _w.push('ครั้งก่อนถุง "'+n+'" บันทึกไว้ '+_refW+' กก./ใบ แต่ครั้งนี้กรอก '+weightPerBag+' กก./ใบ');
+    const _refS=lastOf(S.sackReceipts,x=>x.kind===kind&&x.name===n,'sackWeightKg');
+    if(_refS>0 && (sackWeightKg>_refS*3||sackWeightKg<_refS/3))
+      _w.push('ครั้งก่อนกระสอบ "'+n+'" หนัก '+_refS+' กก. แต่ครั้งนี้กรอก '+sackWeightKg+' กก.');
+    if(!await confirmOdd(_w)) return;
+    const dateVal=$('bagDate').value?$('bagDate').value+'T'+localISO().slice(11):localISO();
+    S.sackReceipts.push({ id:uid(), time:dateVal, kind, name:n, size:normSize($('bagSize').value), sackNo, sackWeightKg, weightPerBag, note:$('bagNote').value.trim() });
+    await saveBag(); $('bagNote').value=''; $('bagSackNo').value='';
+    /* ไซซ์ถุง / น้ำหนักกระสอบ / น้ำหนักต่อใบ ค้างไว้ เพราะมักรับเข้าแบบเดิมซ้ำๆ */
+    // ประเภท+ชื่อถุงค้างไว้ จนกว่าจะเปลี่ยนเอง (มักรับเข้ากระสอบเดิมหลายรอบติดกัน)
+    rBag(); toast('บันทึกรับเข้ากระสอบแล้ว — กระสอบ #'+sackNo);
+  };
+
+  /* ---------- 3b. GAS ---------- */
+  function rGas(){
+    if(!$('gasDate').value) $('gasDate').value=todayStr();
+    const status=CALC.gasStatus(S.gasReceipts,PROD.gasSwaps);
+    const available=status.filter(g=>!g.used);
+    $('gasStats').innerHTML=
+      '<div class="stat"><div class="v">'+available.length+'</div><div class="l">ถังคงเหลือ (ยังไม่ใช้)</div></div>'+
+      '<div class="stat"><div class="v">'+status.length+'</div><div class="l">ถังทั้งหมดที่เคยรับเข้า</div></div>';
+
+    $('tGasStatus').innerHTML=status.length?'<tr><th>ถัง #</th><th>วันที่รับเข้า</th><th>สถานะ</th><th></th></tr>'+
+      status.slice().reverse().map(g=>'<tr><td>#'+g.gasNo+'</td><td>'+ymd(g.time)+'</td><td>'+
+        (g.used?'<span class="bdg warn">ใช้แล้ว</span>':'<span class="bdg ok">พร้อมใช้</span>')+
+        '</td><td>'+(!g.used?'<button class="x" data-gasrm="'+g.gasNo+'">✕</button>':'')+'</td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';
+    $('tGasStatus').querySelectorAll('[data-gasrm]').forEach(b=>b.onclick=async()=>{
+      if(!await ask('ลบถัง #'+b.dataset.gasrm+' ออกจากสต๊อก?')) return;
+      S.gasReceipts=S.gasReceipts.filter(x=>String(x.gasNo)!==b.dataset.gasrm);
+      await saveGas(); rGas(); toast('ลบแล้ว');
+    });
+
+    const swapHist=PROD.gasSwaps.slice().reverse().slice(0,50);
+    $('tGasSwapHist').innerHTML=swapHist.length?'<tr><th>เวลาที่เปลี่ยน</th><th>ถังที่ใช้</th></tr>'+
+      swapHist.map(s=>'<tr><td>'+(s.time||'').slice(0,16).replace('T',' ')+'</td><td>'+(s.gasNos||[]).map(n=>'#'+n).join(', ')+'</td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีการเปลี่ยนถัง</td></tr>';
+  }
+  $('btnGasReceive').onclick=async()=>{
+    const qty=+$('gasQty').value||0;
+    if(!qty){ toast('กรอกจำนวนถัง'); return; }
+    const dateVal=$('gasDate').value?$('gasDate').value+'T'+localISO().slice(11):localISO();
+    let start=CALC.nextGasNo(S.gasReceipts);
+    for(let i=0;i<qty;i++) S.gasReceipts.push({ id:uid(), time:dateVal, gasNo:start+i, note:$('gasNote').value.trim() });
+    await saveGas(); $('gasQty').value='10'; $('gasNote').value='';
+    rGas(); toast('บันทึกรับเข้าถังแก๊ส '+qty+' ถัง — เริ่มที่ #'+start);
+  };
+
+  /* ---------- 4. FINISHED GOODS ---------- */
+  function rFin(){
+    const produced=producedByOrder();
+    const stock=CALC.finStock(produced, S.shipments, S.finAdjustments);
+    stock.sort((a,b)=>orderLabel(a.orderId).localeCompare(orderLabel(b.orderId),'th'));
+    const freeStock=CALC.freeFinStock(S.finAdjustments);
+    freeStock.sort((a,b)=>a.freeLabel.localeCompare(b.freeLabel,'th'));
+
+    let cardsHtml=stock.length?stock.map(s=>{ const o=orderById(s.orderId);
+      return '<div class="scard"><div class="nm">'+esc(orderLabel(s.orderId))+(o?' <span class="bdg ok">'+esc(o.productType||'ใย')+'</span>':'')+'</div>'+
+      '<div class="n">'+s.stock+' <span style="font-size:13px;color:#ffffff;">แพ็ค</span></div><div class="l">ผลิตได้ '+s.produced+' · ส่งออกแล้ว '+s.shipped+' แพ็ค'+
+      (s.adjusted?' · ปรับยอด '+(s.adjusted>0?'+':'')+s.adjusted+' แพ็ค':'')+'</div>'+
+      '<button class="ed" style="margin-top:6px;" data-finadj="'+s.orderId+'">ปรับยอดคงเหลือ</button></div>'; }).join(''):'';
+    cardsHtml += freeStock.length?freeStock.map(s=>
+      '<div class="scard"><div class="nm">'+esc(s.freeLabel)+' <span class="bdg warn">ไม่มีออเดอร์</span></div>'+
+      '<div class="n">'+s.stock+' <span style="font-size:13px;color:#ffffff;">แพ็ค</span></div><div class="l">ลงยอดอิสระ (ยังไม่มีออเดอร์ในแอพผลิต)</div>'+
+      '<button class="ed" style="margin-top:6px;" data-finfreeadj="'+esc(s.freeLabel)+'">ปรับยอดคงเหลือ</button></div>'
+    ).join(''):'';
+    $('finCards').innerHTML=cardsHtml||'<div class="empty">ยังไม่มีข้อมูล</div>';
+
+    $('finCards').querySelectorAll('[data-finadj]').forEach(btn=>btn.onclick=async()=>{
+      const s=stock.find(x=>x.orderId===btn.dataset.finadj); if(!s) return;
+      const input=await askText2('ปรับยอดสต๊อกสินค้าสำเร็จรูปของ "'+orderLabel(s.orderId)+'" เป็นเท่าไหร่ (แพ็ค)\n\nตอนนี้เหลือ '+s.stock+' แพ็ค (ผลิตได้ '+s.produced+' - ส่งออกแล้ว '+s.shipped+')', s.stock);
+      if(input===null) return;
+      const target=+input; if(isNaN(target)){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
+      const delta=r2(target-s.stock);
+      if(delta===0){ toast('ยอดเท่าเดิม ไม่ต้องปรับ'); return; }
+      S.finAdjustments.push({ id:uid(), time:localISO(), orderId:s.orderId, delta, note:'ปรับยอดให้ตรงกับที่นับจริง' });
+      await saveFin(); rFin(); toast('ปรับยอดเป็น '+target+' แพ็ค แล้ว');
+    });
+    $('finCards').querySelectorAll('[data-finfreeadj]').forEach(btn=>btn.onclick=async()=>{
+      const s=freeStock.find(x=>x.freeLabel===btn.dataset.finfreeadj); if(!s) return;
+      const input=await askText2('ปรับยอดสต๊อกของ "'+s.freeLabel+'" เป็นเท่าไหร่ (แพ็ค)\n\nตอนนี้เหลือ '+s.stock+' แพ็ค', s.stock);
+      if(input===null) return;
+      const target=+input; if(isNaN(target)){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
+      const delta=r2(target-s.stock);
+      if(delta===0){ toast('ยอดเท่าเดิม ไม่ต้องปรับ'); return; }
+      S.finAdjustments.push({ id:uid(), time:localISO(), orderId:null, freeLabel:s.freeLabel, delta, note:'ปรับยอดให้ตรงกับที่นับจริง' });
+      await saveFin(); rFin(); toast('ปรับยอดเป็น '+target+' แพ็ค แล้ว');
+    });
+
+    const keepObFin=$('obFinSel').value;
+    $('obFinSel').innerHTML='<option value="">— เลือกออเดอร์ —</option>'+PROD.orders.slice().sort((a,b)=>orderLabel(a.id).localeCompare(orderLabel(b.id),'th')).map(o=>'<option value="'+o.id+'">'+esc(orderLabel(o.id))+'</option>').join('');
+    if(PROD.orders.some(o=>o.id===keepObFin)) $('obFinSel').value=keepObFin;
+
+    if(!$('finFreeDate').value) $('finFreeDate').value=todayStr();
+    const freeCustomers=[...new Set(S.finAdjustments.filter(a=>a.freeLabel).map(a=>a.freeLabel.split(' — ')[0]))].sort();
+    const keepFreeCust=$('finFreeCustSel').value;
+    $('finFreeCustSel').innerHTML='<option value="">— เลือกลูกค้า —</option>'+freeCustomers.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'<option value="__new__">+ พิมพ์ชื่อใหม่…</option>';
+    if(freeCustomers.includes(keepFreeCust)||keepFreeCust==='__new__') $('finFreeCustSel').value=keepFreeCust;
+    $('dlFinFreeCust').innerHTML=freeCustomers.map(c=>'<option value="'+esc(c)+'"></option>').join('');
+
+    const inRows=PROD.line.slice().sort((a,b)=>a.time<b.time?1:-1).slice(0,80);
+    $('tFinIn').innerHTML=inRows.length?'<tr><th>เวลา</th><th>ออเดอร์</th><th>ลำดับ</th><th>น้ำหนักจริง</th></tr>'+
+      inRows.map(l=>'<tr><td>'+ymd(l.time)+' '+hhmm(l.time)+'</td><td>'+esc(orderLabel(l.orderId))+'</td><td>'+l.seq+'</td><td>'+(l.actualWeight==null?'—':l.actualWeight+' กก.')+'</td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';
+
+    const adjRows=S.finAdjustments.slice().reverse().slice(0,50);
+    $('tFinAdj').innerHTML=adjRows.length?'<tr><th>เวลา</th><th>สินค้า</th><th>ปรับ</th><th>หมายเหตุ</th><th></th></tr>'+
+      adjRows.map(a=>'<tr><td>'+ymd(a.time)+' '+hhmm(a.time)+'</td><td>'+esc(a.freeLabel||orderLabel(a.orderId))+(a.freeLabel?' <span class="bdg warn" style="font-size:10px;">ไม่มีออเดอร์</span>':'')+'</td><td>'+(a.delta>0?'+':'')+a.delta+' แพ็ค</td><td>'+esc(a.note||'')+
+        '</td><td><button class="x" data-finadjrm="'+a.id+'">✕</button></td></tr>').join('')
+      :'<tr><td class="empty">ยังไม่มีการปรับยอด</td></tr>';
+    $('tFinAdj').querySelectorAll('[data-finadjrm]').forEach(b=>b.onclick=async()=>{
+      if(!await ask('ลบรายการปรับยอดนี้?')) return;
+      S.finAdjustments=S.finAdjustments.filter(x=>x.id!==b.dataset.finadjrm); await saveFin(); rFin(); toast('ลบแล้ว');
+    });
+  }
+  $('finFreeMode').onchange=function(){
+    const free=this.checked;
+    $('finOrderModeRow').style.display=free?'none':'block';
+    $('finFreeModeRow').style.display=free?'flex':'none';
+    $('finFreeLotLabel').style.display=free?'block':'none';
+    $('finFreeLot').style.display=free?'block':'none';
+    $('finFreeDateLabel').style.display=free?'block':'none';
+    $('finFreeDate').style.display=free?'block':'none';
+  };
+  $('finFreeCustSel').onchange=function(){ const v=this.value,t=$('finFreeCustName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} };
+  $('btnObFin').onclick=async()=>{
+    const target=+$('obFinQty').value;
+    if(isNaN(target)){ toast('กรอกจำนวนแพ็ค'); return; }
+    if($('finFreeMode').checked){
+      const cust=($('finFreeCustSel').value==='__new__'?$('finFreeCustName').value:$('finFreeCustSel').value).trim();
+      const code=$('finFreeCode').value.trim();
+      if(!cust||!code){ toast('กรอกลูกค้าและรหัส/ชื่อสินค้า'); return; }
+      const freeLabel=cust+' — '+code;
+      const refNo=$('finFreeLot').value.trim();
+      const cur=CALC.freeFinStock(S.finAdjustments).find(x=>x.freeLabel===freeLabel);
+      const curStock=cur?cur.stock:0;
+      const delta=r2(target-curStock);
+      if(delta===0){ toast('ยอดเท่าเดิม ไม่ต้องปรับ'); return; }
+      const dateVal=$('finFreeDate').value?$('finFreeDate').value+'T'+localISO().slice(11):localISO();
+      S.finAdjustments.push({ id:uid(), time:dateVal, orderId:null, freeLabel, refNo, delta, note:'ยอดยกมา'+(refNo?' — เลขอ้างอิง '+refNo:'') });
+      await saveFin(); $('obFinQty').value=''; $('finFreeCode').value=''; $('finFreeLot').value='';
+      // ลูกค้าที่เลือกไว้ค้างต่อเนื่อง จนกว่าจะเปลี่ยนเอง
+      rFin(); toast('บันทึกยอดยกมาเป็น '+target+' แพ็ค แล้ว — '+freeLabel);
+      return;
+    }
+    const orderId=$('obFinSel').value;
+    if(!orderId){ toast('เลือกออเดอร์ก่อน'); return; }
+    if(isNaN(target)){ toast('กรอกจำนวนแพ็ค'); return; }
+    const stock=CALC.finStock(producedByOrder(), S.shipments, S.finAdjustments);
+    const cur=stock.find(x=>x.orderId===orderId);
+    const curStock=cur?cur.stock:0;
+    const delta=r2(target-curStock);
+    if(delta===0){ toast('ยอดเท่าเดิม ไม่ต้องปรับ'); return; }
+    S.finAdjustments.push({ id:uid(), time:localISO(), orderId, delta, note:'ยอดยกมา' });
+    await saveFin(); $('obFinQty').value='';
+    // ออเดอร์ที่เลือกไว้ค้างไว้ จนกว่าจะเปลี่ยนเอง
+    rFin(); toast('บันทึกยอดยกมาเป็น '+target+' แพ็ค แล้ว');
+  };
+
+  /* ---------- 5. DISPATCH ---------- */
+  let dpItems=[];
+  function refreshDpDateOptions(){
+    const oid=$('dpOrdSel').value;
+    const dates=[...new Set(PROD.line.filter(l=>l.orderId===oid).map(l=>l.time.slice(0,10)))].sort();
+    $('dpDateSel').innerHTML='<option value="">— อัตโนมัติ (FIFO) —</option>'+dates.map(d=>'<option value="'+d+'">'+d+'</option>').join('');
+  }
+  function rShip(){
+    if(!$('dpDate').value) $('dpDate').value=todayStr();
+    if(!$('dpOrdSel').dataset.init){
+      const stock=CALC.finStock(producedByOrder(),S.shipments,S.finAdjustments);
+      $('dpOrdSel').innerHTML=stock.filter(s=>s.stock>0).map(s=>'<option value="'+s.orderId+'">'+esc(orderLabel(s.orderId))+' (เหลือ '+s.stock+' แพ็ค)</option>').join('');
+      $('dpOrdSel').dataset.init='1';
+      $('dpOrdSel').onchange=refreshDpDateOptions;
+      refreshDpDateOptions();
+    }
+    $('dpItems').innerHTML = dpItems.length ? dpItems.map((it,i)=>
+      '<div class="cartrow"><b class="kn" style="color:var(--accent2)">'+esc(orderLabel(it.orderId))+'</b> — '+it.qty+' แพ็ค'+
+      (it.ref.count?' <span class="bdg ok">'+(it.pickedDate?'วันที่เลือก':'FIFO อัตโนมัติ')+': ลำดับ '+it.ref.seqFrom+'-'+it.ref.seqTo+' ('+it.ref.dateFrom+(it.ref.dateFrom!==it.ref.dateTo?' ถึง '+it.ref.dateTo:'')+')</span>':'')+
+      (it.ref.short?' <span class="bdg warn">ขาดสต๊อก '+it.ref.short+' แพ็ค</span>':'')+
+      ' <button class="x" data-rm="'+i+'">✕</button>'+
+      '<div style="margin-top:6px;">'+(it.ref.seqs||[]).map(sq=>'<label class="chkrow"><input type="checkbox" data-chk="'+i+'|'+sq+'" '+((it.checkedSeqs||[]).includes(sq)?'checked':'')+'> ลำดับ '+sq+'</label>').join('')+'</div>'+
+      '</div>').join('')
+      : '<div class="empty">ยังไม่มีรายการในเที่ยวนี้</div>';
+    $('dpItems').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ dpItems.splice(+b.dataset.rm,1); rShip(); });
+    $('dpItems').querySelectorAll('[data-chk]').forEach(b=>b.onclick=()=>{
+      const [idx,sq]=b.dataset.chk.split('|'); const it=dpItems[+idx]; const sqn=+sq;
+      it.checkedSeqs=it.checkedSeqs||[];
+      if(b.checked){ if(!it.checkedSeqs.includes(sqn)) it.checkedSeqs.push(sqn); }
+      else { it.checkedSeqs=it.checkedSeqs.filter(x=>x!==sqn); }
+    });
+
+    $('dpHistory').innerHTML = S.deliveries.length ? S.deliveries.slice().reverse().map(d=>
+      '<div class="card" style="background:var(--panel2); margin-bottom:8px;">'+
+      '<div class="kn" style="font-size:14px;">'+d.date+' — '+esc(d.truck||'ไม่ระบุรถ')+'</div>'+
+      '<table style="margin-top:6px;"><tr><th>ลูกค้า/ออเดอร์</th><th>จำนวน</th><th>อ้างอิงลำดับผลิต</th></tr>'+
+      d.items.map(it=>'<tr><td>'+esc(orderLabel(it.orderId))+'</td><td>'+it.qty+' แพ็ค</td><td>'+
+        (it.refSeqFrom!=null? it.refSeqFrom+'-'+it.refSeqTo+' ('+it.refDateFrom+')' : '—')+'</td></tr>').join('')+
+      '</table><button class="btn sec sm" style="margin-top:8px;" data-print="'+d.id+'">🖨 พิมพ์บิลนี้อีกครั้ง</button> '+
+      '<button class="btn dg sm" style="margin-top:8px;" data-delrm="'+d.id+'">✕ ลบเที่ยวรถนี้</button></div>'
+    ).join('') : '<div class="empty">ยังไม่มีเที่ยวรถ</div>';
+    $('dpHistory').querySelectorAll('[data-print]').forEach(b=>b.onclick=()=>printDelivery(S.deliveries.find(d=>d.id===b.dataset.print)));
+    $('dpHistory').querySelectorAll('[data-delrm]').forEach(b=>b.onclick=async()=>{
+      if(!await ask('ลบเที่ยวรถนี้?','สินค้าที่ส่งไปในเที่ยวนี้จะกลับเข้าสต๊อกสำเร็จรูปให้เอง')) return;
+      S.deliveries=S.deliveries.filter(x=>x.id!==b.dataset.delrm);
+      S.shipments=S.shipments.filter(x=>x.deliveryId!==b.dataset.delrm);
+      await saveFin(); rShip(); toast('ลบแล้ว');
+    });
+  }
+  $('btnAddDpItem').onclick=()=>{
+    const oid=$('dpOrdSel').value, qty=+$('dpQty').value, pickedDate=$('dpDateSel').value;
+    if(!oid||!qty){ toast('เลือกออเดอร์และกรอกจำนวน'); return; }
+    const alreadyInThisTrip=dpItems.filter(x=>x.orderId===oid && x.pickedDate===pickedDate).reduce((s,x)=>s+x.qty,0);
+    let orderLines, priorShipped;
+    if(pickedDate){
+      orderLines=PROD.line.filter(l=>l.orderId===oid && l.time.slice(0,10)===pickedDate);
+      priorShipped=CALC.shippedCountForDate(S.deliveries,oid,pickedDate)+alreadyInThisTrip;
+    } else {
+      orderLines=PROD.line.filter(l=>l.orderId===oid);
+      priorShipped=S.shipments.filter(s=>s.orderId===oid).reduce((s,x)=>s+(+x.qty||0),0)+alreadyInThisTrip;
+    }
+    const ref=CALC.fifoLotRef(orderLines, priorShipped, qty);
+    if(ref.short>0 && !window.confirm('สต๊อก'+(pickedDate?'วันที่ '+pickedDate+' ':'')+'ของออเดอร์นี้ไม่พอ ขาดอยู่ '+ref.short+' แพ็ค ยืนยันจะเพิ่มลงเที่ยวรถหรือไม่?')) return;
+    dpItems.push({ orderId:oid, qty, ref, checkedSeqs:[], pickedDate });
+    $('dpQty').value=''; rShip(); toast('เพิ่มลงเที่ยวรถแล้ว — เช็คลิสต์ลำดับก่อนขึ้นรถด้วย');
+  };
+  $('btnSaveDelivery').onclick=async()=>{
+    if(!dpItems.length){ toast('ยังไม่มีรายการในเที่ยวรถ'); return; }
+    const incomplete=dpItems.filter(it=>!CALC.checklistComplete(it));
+    if(incomplete.length && !window.confirm('มี '+incomplete.length+' รายการที่ยังเช็คลิสต์ไม่ครบ ยืนยันจะบันทึกเที่ยวรถนี้เลยหรือไม่?')) return;
+    const delivery={ id:uid(), date:$('dpDate').value||todayStr(), truck:$('dpTruck').value.trim(), poNumber:$('dpPO').value.trim(), createdAt:localISO(),
+      items:dpItems.map(it=>({ orderId:it.orderId, qty:it.qty, refSeqFrom:it.ref.seqFrom, refSeqTo:it.ref.seqTo, refDateFrom:it.ref.dateFrom, refDateTo:it.ref.dateTo, seqs:it.ref.seqs||[], checkedSeqs:it.checkedSeqs||[] })) };
+    S.deliveries.push(delivery);
+    dpItems.forEach(it=>{ S.shipments.push({ id:uid(), time:localISO(), orderId:it.orderId, qty:it.qty, to:delivery.truck, note:'เที่ยวรถ '+delivery.date, deliveryId:delivery.id }); });
+    await saveFin();
+    printDelivery(delivery);
+    dpItems=[]; $('dpTruck').value=''; $('dpPO').value=''; $('dpOrdSel').dataset.init=''; rShip(); toast('บันทึกเที่ยวรถและออกบิลแล้ว');
+  };
+  function printDelivery(d){
+    if(!d) return;
+    const byCustomer={};
+    d.items.forEach(it=>{ const o=orderById(it.orderId); const cust=o?o.customer:'(ไม่ทราบ)'; byCustomer[cust]=byCustomer[cust]||[]; byCustomer[cust].push(it); });
+    let html='';
+    Object.entries(byCustomer).forEach(([cust,items],idx)=>{
+      // รวมทุกรายการของลูกค้านี้เป็นแถวเดียวต่อเนื่อง: No.=ลำดับรันเฉยๆ, No.Pack=เลข seq จริงจากแอพผลิต, Date=วันที่ผลิตแพ็คนั้นจริง
+      const rows=[];
+      items.forEach(it=>{
+        const o=orderById(it.orderId);
+        (it.seqs&&it.seqs.length?it.seqs:new Array(it.qty).fill(null)).forEach(sq=>{
+          const line=sq!=null?PROD.line.find(l=>l.orderId===it.orderId&&l.seq===sq):null;
+          rows.push({ pack:sq!=null?sq:'', date:line?ymd(line.time):'', pieces:(o&&o.spec&&o.spec.piecesPerPack)||0, code:o?o.code:'-' });
+        });
+      });
+      const totalPacks=rows.length, totalPieces=rows.reduce((s,r)=>s+r.pieces,0);
+      html+='<div class="billsheet"'+(idx>0?' style="page-break-before:always;"':'')+'>'+
+        '<div class="billhead"><div class="billtitle">ใบเช็คสินค้าออก</div>'+
+        '<div class="billco">บจก.วินโพลีดีไซน์ เทรดดิ้ง</div>'+
+        '<div class="billdate">วันที่ '+esc(d.date)+'</div></div>'+
+        '<div class="billmeta"><div>ทะเบียนรถขนส่ง: '+esc(d.truck||'-')+'</div>'+
+        '<div>เลข PO: '+esc(d.poNumber||'-')+'</div>'+
+        '<div>ลูกค้า: '+esc(cust)+'</div>'+
+        '<div>รหัสงาน: '+esc([...new Set(rows.map(r=>r.code))].join(', '))+'</div></div>';
+      html+='<table class="billgrid"><tr><th>No.</th><th>No.Pack</th><th>Date</th></tr>';
+      rows.forEach((r,i)=>{
+        html+='<tr><td>'+(i+1)+'</td><td>'+esc(r.pack)+'</td><td>'+esc(r.date)+'</td></tr>';
+        if((i+1)%50===0 && i+1<rows.length){
+          const blockRows=rows.slice(i+1-50,i+1);
+          html+='<tr class="billsum"><td colspan="3">จำนวนแพ็ค '+blockRows.length+' &nbsp; จำนวนชิ้น '+blockRows.reduce((s,r)=>s+r.pieces,0)+'</td></tr>';
+        }
+      });
+      html+='</table>';
+      html+='<div class="billtotal">รวมทั้งสิ้น — จำนวนแพ็ค <b>'+totalPacks+'</b> แพ็ค &nbsp; จำนวนชิ้น <b>'+totalPieces+'</b> ชิ้น</div>';
+      html+='</div>';
+    });
+    $('printBill').innerHTML=html;
+    const prevTitle=document.title;
+    document.title='ใบเช็คสินค้าออก '+(d.date||'');
+    setTimeout(()=>{ window.print(); setTimeout(()=>{ document.title=prevTitle; },500); },100);
+  }
+
+  /* ---------- 6. SUMMARY / EXPORT / CLEAR ---------- */
+  function rSum(){
+    const rawS=CALC.rawStock(S.fiberReceipts,PROD.wd);
+    const finS=CALC.finStock(producedByOrder(),S.shipments,S.finAdjustments);
+    const sackStatus=CALC.sackStatus(S.sackReceipts,PROD.bagWd);
+    const zipS=CALC.bagAggregate(sackStatus,'zip');
+    const packS=CALC.bagAggregate(sackStatus,'pack');
+    const pipe=CALC.fabricPipelineV3(CALC.cutBatchStatus(S.cutBatches,S.sewSent,S.sewReturns,PROD.fabricWd));
+    const rollsByType=allFabricTypes().map(t=>CALC.availableRolls(S.fabricReceipts,S.cuts,t).length);
+
+    $('sumStats').innerHTML=
+      '<div class="stat"><div class="v">'+r3(rawS.reduce((s,x)=>s+x.stock,0))+'</div><div class="l">ใยคงเหลือรวม (กก.)</div></div>'+
+      '<div class="stat"><div class="v">'+rollsByType.reduce((s,x)=>s+x,0)+'</div><div class="l">ม้วนผ้ายังไม่ตัด</div></div>'+
+      '<div class="stat"><div class="v">'+pipe.reduce((s,x)=>s+Math.max(0,x.readyStock),0)+'</div><div class="l">ผ้าเย็บพร้อมผลิต (ชิ้น)</div></div>'+
+      '<div class="stat"><div class="v">'+zipS.reduce((s,x)=>s+x.remainingKg,0)+'</div><div class="l">ถุงซิลคงเหลือรวม (กก.)</div></div>'+
+      '<div class="stat"><div class="v">'+packS.reduce((s,x)=>s+x.remainingKg,0)+'</div><div class="l">ถุงแพ็คคงเหลือรวม (กก.)</div></div>'+
+      '<div class="stat"><div class="v">'+r2(finS.reduce((s,x)=>s+x.stock,0)+CALC.freeFinStock(S.finAdjustments).reduce((s,x)=>s+(+x.stock||0),0))+'</div><div class="l">สินค้าสำเร็จรูปคงเหลือ (แพ็ค)</div></div>';
+
+    const low=[];
+    rawS.forEach(r=>{ const th=+S.fiberTh[r.name]||0; if(th>0&&r.stock<th) low.push({name:'ใย: '+r.name, stock:r.stock+' กก.', th:th+' กก.'}); });
+    allFabricTypes().forEach(t=>{ const hadRoll=(S.fabricReceipts||[]).some(r=>r.fabricType===t); if(!hadRoll) return;
+      const a=CALC.availableRolls(S.fabricReceipts,S.cuts,t).length; if(a<=2) low.push({name:'ผ้า: '+t, stock:a+' ม้วน', th:'2 ม้วน'}); });
+    zipS.forEach(z=>{ if(z.remainingKg<5) low.push({name:'ถุงซิล: '+z.name, stock:z.remainingKg+' กก.', th:'5 กก.'}); });
+    packS.forEach(p=>{ if(p.remainingKg<5) low.push({name:'ถุงแพ็ค: '+p.name, stock:p.remainingKg+' กก.', th:'5 กก.'}); });
+    /* รวมจุดเตือนของ "ประเภทสินค้า" เข้ามาในตารางใกล้หมดด้วย */
+    try{
+      const _bs=CALC.cutBatchStatus(S.cutBatches,S.sewSent,S.sewReturns,PROD.fabricWd);
+      const _pts=CALC.productTypeStock(_bs,S.sewReturns);
+      Object.keys(S.prodTypeTh||{}).forEach(function(t){
+        const th=+S.prodTypeTh[t]||0; if(th<=0) return;
+        const qty=CALC.productTypeTotal(_pts,t);
+        if(qty<th) low.push({name:'ประเภทสินค้า: '+t, stock:qty+' ชิ้น', th:th+' ชิ้น'});
+      });
+    }catch(e){}
+    $('tLow').innerHTML=low.length?'<tr><th>รายการ</th><th>คงเหลือ</th><th>เกณฑ์เตือน</th></tr>'+
+      low.map(l=>'<tr><td>'+esc(l.name)+'</td><td><b style="color:var(--red)">'+esc(l.stock)+'</b></td><td>'+esc(l.th)+'</td></tr>').join('')
+      :'<tr><td class="empty">ไม่มีรายการใกล้หมด</td></tr>';
+
+    if(!$('exFrom').value){
+      const all=[...S.fiberReceipts,...S.fabricReceipts,...S.cuts,...S.sewSent,...S.sewReturns,...S.sackReceipts].map(x=>ymd(x.time))
+        .filter(d=>{ const y=+String(d).slice(0,4); return y>=2015 && y<=2100; }).sort();
+      $('exFrom').value=all[0]||todayStr(); $('exTo').value=todayStr();
+    }
+  }
+
+  function csvCell(v){ const s=(v==null?'':String(v)); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+  function toCSV(rows){ return rows.map(r=>r.map(csvCell).join(',')).join('\r\n'); }
+  function download(name,text){
+    try{
+      const blob=new Blob(['\ufeff'+text],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+      setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },500);
+      return true;
+    }catch(e){ console.error(e); toast('ดาวน์โหลดไม่สำเร็จบนอุปกรณ์นี้'); return false; }
+  }
+  function inRange(x,from,to){ const d=ymd(x.time); return (!from||d>=from) && (!to||d<=to); }
+  function buildStockCSV(from,to){
+    const rows=[];
+    rows.push(['รายงานสต๊อก','ช่วง',from||'ทั้งหมด','ถึง',to||'ทั้งหมด','ออกเมื่อ',localISO().replace('T',' ')]);
+    rows.push([]);
+    rows.push(['[รับเข้าใย]']); rows.push(['วันที่','เวลา','ใย','ล็อต','กก.','ผู้ขาย','หมายเหตุ']);
+    S.fiberReceipts.filter(x=>inRange(x,from,to)).forEach(r=>rows.push([ymd(r.time),hhmm(r.time),r.fiberName,r.lotNo,r.kg,r.supplier||'',r.note||'']));
+    rows.push([]);
+    rows.push(['[รับเข้าม้วนผ้า]']); rows.push(['วันที่','ชนิดผ้า','ม้วนที่','หมายเหตุ']);
+    S.fabricReceipts.filter(x=>inRange(x,from,to)).forEach(r=>rows.push([ymd(r.time),r.fabricType,r.rollNo,r.note||'']));
+    rows.push([]);
+    rows.push(['[ตัดผ้า]']); rows.push(['วันที่','ชนิดผ้า','ม้วนที่','ไซซ์','ถุง #','จำนวน(ชิ้น)']);
+    S.cutBatches.filter(x=>inRange(x,from,to)).forEach(b=>rows.push([ymd(b.time),b.fabricType,b.rollNo,b.size,b.batchNo,b.qtyCut]));
+    rows.push([]);
+    rows.push(['[ส่งเย็บ]']); rows.push(['วันที่','เวลา','ถุง #','ชนิดผ้า','ไซซ์','ประเภทสินค้า','จำนวน','ผู้เย็บ','หมายเหตุ']);
+    S.sewSent.filter(x=>inRange(x,from,to)).forEach(s=>rows.push([ymd(s.time),hhmm(s.time),s.batchNo||'',s.fabricType,s.size,s.productType||'',s.qty,s.sewerName||'',s.note||'']));
+    rows.push([]);
+    rows.push(['[รับกลับจากเย็บ]']); rows.push(['วันที่','ถุง #','ชนิดผ้า','ไซซ์','ประเภทสินค้า','รับมา','ผู้เย็บ','หมายเหตุ']);
+    S.sewReturns.filter(x=>inRange(x,from,to)).forEach(s=>rows.push([ymd(s.time),s.batchNo||'',s.fabricType,s.size,s.productType||'',s.qty,s.sewerName||'',s.note||'']));
+    rows.push([]);
+    rows.push(['[เบิกผ้าไปผลิต]']); rows.push(['วันที่','เวลา','ชนิดผ้า','ไซซ์','จำนวน','หยิบจากถุง','หมายเหตุ']);
+    PROD.fabricWd.filter(x=>inRange(x,from,to)).forEach(w=>rows.push([ymd(w.time),hhmm(w.time),w.fabricType,w.size,w.qty,(w.picks||[]).map(p=>'#'+p.batchNo+':'+p.qty).join(' '),w.note||'']));
+    rows.push([]);
+    rows.push(['[รับเข้ากระสอบถุง]']); rows.push(['วันที่','ประเภท','ชื่อ','ไซซ์','กระสอบ #','น้ำหนักกระสอบ(กก.)','น้ำหนักต่อใบ','หมายเหตุ']);
+    S.sackReceipts.filter(x=>inRange(x,from,to)).forEach(r=>rows.push([ymd(r.time),r.kind==='zip'?'ถุงซิล':'ถุงแพ็ค',r.name,r.size||'',r.sackNo,r.sackWeightKg,r.weightPerBag||'',r.note||'']));
+    rows.push([]);
+    rows.push(['[เบิกกระสอบถุง]']); rows.push(['วันที่','เวลา','ประเภท','ชื่อ','กก.','หยิบจากกระสอบ']);
+    PROD.bagWd.filter(x=>inRange(x,from,to)).forEach(w=>rows.push([ymd(w.time),hhmm(w.time),w.kind==='zip'?'ถุงซิล':'ถุงแพ็ค',w.name,w.kg,(w.picks||[]).map(p=>'#'+p.sackNo+':'+p.take).join(' ')]));
+    rows.push([]);
+    rows.push(['[รับเข้าถังแก๊ส]']); rows.push(['วันที่','ถัง #','หมายเหตุ']);
+    S.gasReceipts.filter(x=>inRange(x,from,to)).forEach(g=>rows.push([ymd(g.time),g.gasNo,g.note||'']));
+    rows.push([]);
+    rows.push(['[เปลี่ยนถังแก๊ส]']); rows.push(['วันที่','เวลา','ถังที่ใช้']);
+    PROD.gasSwaps.filter(x=>inRange(x,from,to)).forEach(s=>rows.push([ymd(s.time),hhmm(s.time),(s.gasNos||[]).map(n=>'#'+n).join(' ')]));
+    rows.push([]);
+    rows.push(['[เที่ยวรถจัดส่ง]']); rows.push(['วันที่','รถ/คนขับ','เลข PO','ลูกค้า','รหัสงาน','จำนวน(แพ็ค)','อ้างอิงลำดับ']);
+    S.deliveries.filter(d=>(!from||d.date>=from)&&(!to||d.date<=to)).forEach(d=>d.items.forEach(it=>{
+      const o=orderById(it.orderId);
+      rows.push([d.date,d.truck||'',d.poNumber||'',o?o.customer:'',o?o.code:'',it.qty,it.refSeqFrom!=null?it.refSeqFrom+'-'+it.refSeqTo:'']);
+    }));
+    rows.push([]);
+    rows.push(['[ปรับยอดสินค้าสำเร็จรูป]']); rows.push(['วันที่','เวลา','ลูกค้า','รหัสงาน','ปรับ(แพ็ค)','หมายเหตุ']);
+    S.finAdjustments.filter(x=>inRange(x,from,to)).forEach(a=>{
+      if(a.freeLabel){ rows.push([ymd(a.time),hhmm(a.time),a.freeLabel,'(ไม่มีออเดอร์)',a.delta,a.note||'']); return; }
+      const o=orderById(a.orderId);
+      rows.push([ymd(a.time),hhmm(a.time),o?o.customer:'',o?o.code:'',a.delta,a.note||'']);
+    });
+    return toCSV(rows);
+  }
+  $('btnExport').onclick=()=>{
+    const from=$('exFrom').value, to=$('exTo').value;
+    if(download('สต๊อก_'+(from||'ทั้งหมด')+'_ถึง_'+(to||'ทั้งหมด')+'.csv',buildStockCSV(from,to))) toast('ออกไฟล์แล้ว');
+  };
+  $('btnExportAll').onclick=()=>{ if(download('สำรองข้อมูลสต๊อกทั้งหมด_'+todayStr()+'.csv',buildStockCSV(null,null))) toast('สำรองข้อมูลแล้ว'); };
+
+  $('btnClearAll').onclick=async()=>{
+    if(!window.confirm('⚠ จะลบข้อมูลสต๊อกทั้งหมด (ใย/ผ้า/ถุง/สินค้า/จัดส่ง) — ข้อมูลในแอพผลิตไม่กระทบ\n\nแนะนำให้กด "ออกทั้งหมด" เก็บไฟล์ไว้ก่อน\n\nยืนยันครั้งที่ 1 — ต้องการลบจริงหรือไม่?')) return;
+    if(!window.confirm('⚠ ยืนยันอีกครั้ง — การลบนี้กู้คืนไม่ได้\n\nพิมพ์ "ตกลง" เพื่อยืนยันการลบข้อมูลสต๊อกทั้งหมด')) return;
+    S.fiberReceipts=[]; S.fiberTh={}; S.baleUsage=[]; S.fabricReceipts=[]; S.cuts=[]; S.cutBatches=[]; S.sewSent=[]; S.sewReturns=[]; S.waste=[]; S.prodTypeTh={};
+    S.sackReceipts=[]; S.gasReceipts=[]; S.shipments=[]; S.deliveries=[]; S.finAdjustments=[];
+    await Promise.all([saveFiber(),saveFabric(),saveBag(),saveGas(),saveFin()]);
+    renderPanel(); toast('ล้างข้อมูลสต๊อกทั้งหมดแล้ว');
+  };
+
+  /* ---------- CLOCK + SYNC ---------- */
+  setInterval(()=>{ $('clock').textContent=new Date().toLocaleString('th-TH',{dateStyle:'full',timeStyle:'medium'}); },1000);
+  let lastPulse=null, pollMs=3000, syncBusy=false;
+  async function syncNow(force){
+    if(syncBusy||!hasStore) return;
+    if(!force && document.hidden) return;
+    syncBusy=true;
+    try{
+      const p=await rawGet('v3s_pulse'); const po=await rawGet('v3_pulse');
+      const combined=(p||'')+'|'+(po||'');
+      if(combined===lastPulse){ pollMs=3000; syncBusy=false; return; }
+      const h=await readAll(); lastPulse=combined; pollMs=3000;
+      if(h!==lastHash){ lastHash=h; renderPanel(); }
+    }catch(e){ pollMs=Math.min(30000,pollMs*2); }
+    syncBusy=false;
+  }
+  (function loop(){ setTimeout(()=>{ syncNow().then(loop); }, pollMs); })();
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ pollMs=3000; syncNow(true); } });
+  $('saveState').onclick=()=>{ if(storeDown||Object.keys(pending).length){ Object.keys(pending).forEach(k=>flush(k)); toast('กำลังลองบันทึกใหม่…'); } };
+
+  (async function init(){
+    document.title='ระบบสต๊อกสินค้า — วินโพลีดีไซน์';
+    lastHash=await readAll();
+    if(!hasStore){ storeDown=true; setSaveState('bad','ไม่รองรับ'); } else setSaveState('ok');
+    show('fiber');
+  })();
+})();
+</script>
+
+</body>
+</html>
