@@ -220,6 +220,8 @@
       <div class="card" id="cardBale">
         <h3>ก้อนใยที่กำลังใช้อยู่</h3>
         <div id="baleList"></div>
+        <div class="sumline" style="margin-top:12px; font-weight:600;">ประวัติการเปลี่ยนก้อน</div>
+        <div class="scr"><table id="tLotLog"></table></div>
         <label style="display:flex; align-items:center; gap:8px; margin-top:12px;">
           <input type="checkbox" id="autoCutFiber" style="width:auto; margin:0;" checked>
           <span style="font-size:13px;">หักใยออกจากสต๊อกให้อัตโนมัติทุกครั้งที่แตะ +1 รอบ</span>
@@ -240,7 +242,8 @@
         <div class="scr"><table id="tFeed"></table></div>
       </div>
       <div class="card">
-        <h3>เบิกใย (เปลี่ยนก้อนใย)</h3>
+        <h3>เบิกใยเพิ่มเอง (ใช้เฉพาะกรณีพิเศษ)</h3>
+        <div class="sumline" id="wdDupWarn" style="margin-bottom:6px;"></div>
         <div class="rf">
           <div><label>หมายเลขก้อน</label><input id="wdSeq" inputmode="text" placeholder="เลขที่ก้อนใย"></div>
           <div><label>ชื่อใย</label><select id="wdSel"></select>
@@ -1377,6 +1380,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
             '<span class="bdg warn">ยังไม่ครบ — ต้องได้ '+o.recipeTargetKg+' กก. (ต่างอยู่ '+r3(o.recipeTargetKg-rt)+' กก.)</span>')+'</div>'
           : '<div class="sumline">ยังไม่ได้ตั้งสูตร — ตั้งค่าที่การ์ดล่างสุด</div>');
     }
+    if($('wdDupWarn')){
+      $('wdDupWarn').innerHTML = (o && o.autoCutFiber!==false)
+        ? '<span class="bdg warn">ระบบหักใยให้อัตโนมัติทุกรอบป้อนอยู่แล้ว — เบิกตรงนี้เพิ่มยอดจะถูกหัก<b>ซ้ำ</b> ใช้เฉพาะตอนเบิกใยไปใช้นอกไลน์</span>'
+        : '<span style="color:var(--dim)">ปิดหักอัตโนมัติอยู่ — ต้องเบิกใยเองทุกครั้งที่เปลี่ยนก้อน</span>';
+    }
     /* การ์ดก้อนใยที่กำลังใช้ */
     if($('baleList')){
       const bl=$('baleList');
@@ -1385,36 +1393,61 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         bl.innerHTML='<div class="empty">ยังไม่ได้ตั้งสูตร — ตั้งที่การ์ดล่างสุดก่อน</div>';
       } else {
         bl.innerHTML=o.fibers.filter(f=>f.name).map(f=>{
-          const tag=currentBale(o,f.name);
+          const cur=f.lot||'';
+          const all=fiberLotsNow(f.name);
+          const curRow=all.find(l=>String(l.lot)===String(cur));
           const left=fiberRemainTotal(f.name);
-          const lots=fiberLotsNow(f.name).filter(l=>l.remaining>0);
-          const nextLot=lots.length?lots[0]:null;
+          const live=all.filter(l=>l.remaining>0);
+          const nextLot=live.filter(l=>String(l.lot)!==String(cur)).sort((a,b)=>a.lot-b.lot)[0];
           return '<div class="rf" style="align-items:center; border-top:1px solid var(--border); padding-top:9px; margin-top:9px;">'+
             '<div><div class="kn" style="font-size:15px;">'+esc(f.name)+' <span style="color:var(--dim); font-size:12px;">'+f.kg+' กก./รอบ</span></div>'+
             '<div class="sumline" style="margin-top:2px;">'+
-              (tag?'ก้อนที่ใช้อยู่ <b style="color:var(--accent2)">#'+esc(tag)+'</b>'
-                 :'<span class="bdg warn">ยังไม่ได้แท็กเบอร์ก้อน</span>')+
-              ' · คงเหลือในสต๊อก <b style="color:'+(left<=0?'var(--red)':'var(--accent2)')+'">'+left+' กก.</b>'+
-              (nextLot?' (ล็อต '+esc(nextLot.lot)+' เหลือ '+nextLot.remaining+' กก.)':' <span class="bdg bad">หมดสต๊อก</span>')+
+              (cur
+                ? 'ก้อนที่ใช้อยู่ <b style="color:var(--accent2)">#'+esc(cur)+'</b>'+
+                  (curRow ? ' เหลือ <b style="color:'+(curRow.remaining<=0?'var(--red)':'var(--accent2)')+'">'+curRow.remaining+' กก.</b>'
+                          : ' <span class="bdg warn">ไม่มีเบอร์นี้ในสต๊อก</span>')
+                : '<span class="bdg warn">ยังไม่ได้เลือกเบอร์ก้อน</span>')+
+              ' · ใยนี้เหลือทั้งหมด '+left+' กก.'+
+              (nextLot?' · ก้อนถัดไป #'+esc(nextLot.lot)+' ('+nextLot.remaining+' กก.)'
+                      :(left>0?'':' <span class="bdg bad">หมดสต๊อก</span>'))+
             '</div></div>'+
             '<button class="btn sec sm" data-bale="'+esc(f.name)+'" style="flex:0 0 auto;">🔄 เปลี่ยนก้อน</button></div>';
         }).join('');
         bl.querySelectorAll('[data-bale]').forEach(b=>b.onclick=async()=>{
           const name=b.dataset.bale;
-          const cur=currentBale(o,name);
-          const tag=await askText('เปลี่ยนก้อนใย — '+name,
-            (cur?'ก้อนเดิมที่ใช้อยู่: #'+cur+'\n':'ยังไม่เคยแท็กก้อนของใยตัวนี้\n')+
-            'พิมพ์เบอร์แท็กก้อนใหม่ที่หยิบมาใช้\n\nรอบป้อนใยหลังจากนี้จะถูกบันทึกว่าใช้ก้อนนี้',
-            nextBaleGuess(o,name));
-          if(tag==null) return;
-          const v=String(tag).trim();
-          if(!v){ toast('ยังไม่ได้พิมพ์เบอร์ก้อน'); return; }
-          if(v===cur){ toast('เบอร์ก้อนเหมือนเดิม ไม่ได้เปลี่ยนอะไร'); return; }
-          setBale(o,name,v);
+          const f=(o.fibers||[]).find(x=>x.name===name); if(!f) return;
+          const cur=f.lot||'';
+          const live=fiberLotsNow(name).filter(l=>l.remaining>0);
+          const next=live.filter(l=>String(l.lot)!==String(cur)).sort((a,b)=>a.lot-b.lot)[0];
+          const v=await askText('เปลี่ยนก้อนใย — '+name,
+            (cur?'ก้อนที่ใช้อยู่: #'+cur+'\n':'')+
+            (live.length?'ก้อนที่ยังมีของในสต๊อก: '+live.map(l=>'#'+l.lot+' ('+l.remaining+' กก.)').join(', ')+'\n':'ไม่มีก้อนที่เหลือของในสต๊อกเลย\n')+
+            '\nพิมพ์เบอร์ก้อนใหม่ที่หยิบมาใช้ — รอบป้อนใยหลังจากนี้จะหักจากก้อนนี้',
+            next?String(next.lot):'');
+          if(v==null) return;
+          const t=String(v).trim();
+          if(!t){ toast('ยังไม่ได้พิมพ์เบอร์ก้อน'); return; }
+          if(t===cur){ toast('เบอร์ก้อนเหมือนเดิม ไม่ได้เปลี่ยนอะไร'); return; }
+          const hit=fiberLotsNow(name).find(l=>String(l.lot)===t);
+          if(!hit && !await ask('ไม่มีเบอร์ '+t+' ในสต๊อก','ใย "'+name+'" ไม่มีก้อน/ล็อตเบอร์นี้ในแอพสต๊อก\n\nยืนยันจะใช้เบอร์นี้หรือไม่?')) return;
+          o.lotLog=o.lotLog||[];
+          o.lotLog.push({ time:localISO(), fiberName:name, from:cur, to:t,
+            toRemaining:hit?r3(hit.remaining):null, orderId:o.id, manual:true });
+          f.lot=t;
           await saveOrders(); rFeed(true);
-          toast(name+' เปลี่ยนเป็นก้อน #'+v+' แล้ว');
+          toast(name+' เปลี่ยนเป็นก้อน #'+t+' แล้ว');
         });
       }
+    }
+    if($('tLotLog')){
+      const ll=(o&&o.lotLog?o.lotLog:[]).slice().reverse().slice(0,40);
+      $('tLotLog').innerHTML=ll.length
+        ? '<tr><th>เวลา</th><th>ใย</th><th>เปลี่ยนจาก</th><th>เป็นก้อน</th><th>เหลือในก้อนใหม่</th></tr>'+
+          ll.map(x=>'<tr><td>'+(x.time||'').slice(0,16).replace('T',' ')+'</td><td>'+esc(x.fiberName)+'</td>'+
+            '<td>'+(x.from?'ก้อน '+esc(x.from)+' <span class="bdg warn">หมดแล้ว</span>':'<span style="color:var(--dim)">เริ่มใช้ครั้งแรก</span>')+'</td>'+
+            '<td class="kn" style="color:var(--accent2)">ก้อน '+esc(x.to)+'</td>'+
+            '<td>'+(x.toRemaining==null?'—':x.toRemaining+' กก.')+'</td></tr>').join('')
+        : '<tr><td class="empty">ยังไม่มีการเปลี่ยนก้อน</td></tr>';
     }
     const logs=o?S.feed.filter(l=>l.orderId===o.id&&dayOf(l.time)===t):[];
     $('ringN').textContent=logs.length;
@@ -1515,8 +1548,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     saveFeed().then(()=>{ if(current==='feed') rFeed(); });
     if(cut){
       let msg='รอบที่ '+(n+1)+' — '+cut.msgs.join(' · ');
+      if(cut.switched && cut.switched.length) msg+=' 🔄 '+cut.switched.join(' · ');
       if(cut.shorts.length) msg+=' ⚠ '+cut.shorts.join(' · ');
-      if(cut.noTag.length) msg+=' · ยังไม่ได้แท็กก้อน: '+cut.noTag.join(', ');
       toast(msg);
     }
   };
@@ -1524,7 +1557,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   if($('autoCutFiber')) $('autoCutFiber').onchange=async function(){
     const o=activeFeed(); if(!o){ toast('เลือกออเดอร์ก่อน'); return; }
     o.autoCutFiber=this.checked;
-    await saveOrders();
+    await saveOrders(); rFeed(true);
     toast(this.checked?'จะหักใยออกจากสต๊อกให้อัตโนมัติทุกรอบ':'ปิดการหักใยอัตโนมัติแล้ว — ต้องเบิกใยเองที่การ์ดล่าง');
   };
   $('btnUndoFeed').onclick=async()=>{
@@ -1661,6 +1694,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if(S.wd.some(w=>w.orderId===o.id&&String(w.seq)===bale&&w.fiberName===n)){
       if(!await ask('หมายเลขก้อนซ้ำ','ก้อน "'+bale+'" ของ '+n+' เคยบันทึกไปแล้วในออเดอร์นี้\n\nยืนยันจะบันทึกซ้ำหรือไม่?')) return;
     }
+    if(o.autoCutFiber!==false){
+      if(!await ask('ยอดจะถูกหักซ้ำ',
+        'ระบบหักใยให้อัตโนมัติทุกรอบป้อนอยู่แล้ว\nการเบิก '+kg+' กก. ตรงนี้จะหักออกจากสต๊อกเพิ่มอีก\n\n'+
+        'ใช้เฉพาะกรณีเบิกใยไปใช้นอกไลน์เท่านั้น — ยืนยันหรือไม่?')) return;
+    }
     if(!inRecipe(o,n)){
       if(!await ask('ใยไม่ตรงกับสูตร',
         '"'+n+'" ไม่อยู่ในสูตรของ '+o.customer+'\nสูตรคือ '+(o.fibers.length?o.fibers.map(f=>f.name).join(', '):'ยังไม่ได้ตั้ง')+
@@ -1705,6 +1743,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   // คลังชื่อใย: รวมจากทุกสูตร ทุกการเบิก และที่พิมพ์เพิ่มเอง
   function fiberNames(){
     const set=new Set();
+    /* ใยที่มีอยู่จริงในแอพสต๊อก ต้องขึ้นให้เลือกในสูตรได้เลย */
+    Object.keys(STOCKFIBER||{}).forEach(n=>set.add(n));
     (S.fiberMaster||[]).forEach(n=>set.add(n));
     S.orders.forEach(o=>{
       (o.fibers||[]).forEach(f=>set.add(f.name));
@@ -1726,18 +1766,42 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       '<option value="__new__">+ พิมพ์ชื่อใยใหม่…</option>';
   }
 
-  function addRecRow(name,kg,tagNo){
+  function addRecRow(name,kg,tagNo,lotNo){
     const d=document.createElement('div'); d.className='frow'; d.style.flexWrap='wrap';
     const known=fiberNames();
     const isNew = name && !known.includes(name);
     d.innerHTML='<select class="rsel" style="margin-top:0;">'+fiberOptions(isNew?'__new__':name)+'</select>'+
       '<input class="rn" placeholder="พิมพ์ชื่อใยใหม่" value="'+esc(name||'')+'" style="margin-top:0; display:'+(isNew?'block':'none')+';">'+
-      '<input class="rk" type="number" inputmode="decimal" step="0.01" placeholder="กก." style="max-width:88px; margin-top:0;" value="'+(kg==null?'':kg)+'">'+
+      '<select class="rlotSel" style="max-width:210px; margin-top:0;"></select>'+
+      '<input class="rlot" placeholder="พิมพ์เบอร์เอง" style="max-width:120px; margin-top:0; display:none;">'+
+      '<input class="rk" type="number" inputmode="decimal" step="0.01" placeholder="กก./รอบ" style="max-width:96px; margin-top:0;" value="'+(kg==null?'':kg)+'">'+
       '<input class="rtag" type="hidden" value="'+esc(tagNo||'')+'">'+
       '<button class="x">✕</button>'+
       '<div class="sumline rowLotHint" style="width:100%; margin-top:2px;"></div>';
     const sel=d.querySelector('.rsel'), txt=d.querySelector('.rn');
+    const lotSel=d.querySelector('.rlotSel'), lotTxt=d.querySelector('.rlot');
     if(isNew) sel.value='__new__';
+    /* ช่องที่ 2: เบอร์ล็อต (ก้อน) ที่กำลังใช้ — เลือกจากสต๊อกจริง หรือพิมพ์เอง */
+    const fillLots=(keep)=>{
+      const n=rowFiberName(d);
+      const rows=fiberLotsNow(n);
+      const live=rows.filter(l=>l.remaining>0);
+      if(!n){ lotSel.innerHTML='<option value="">— เลือกชื่อใยก่อน —</option>'; lotTxt.style.display='none'; return; }
+      lotSel.innerHTML='<option value="">— เลือกเบอร์ก้อนที่ใช้อยู่ —</option>'+
+        live.map(l=>'<option value="'+esc(l.lot)+'">ก้อน/ล็อต '+esc(l.lot)+' — เหลือ '+l.remaining+' กก.</option>').join('')+
+        '<option value="__new__">+ พิมพ์เบอร์เอง…</option>';
+      const has=live.some(l=>String(l.lot)===String(keep));
+      if(keep && has) lotSel.value=String(keep);
+      else if(keep){ lotSel.value='__new__'; lotTxt.style.display='block'; lotTxt.value=String(keep); }
+      else if(live.length===1) lotSel.value=String(live[0].lot);   /* เหลือก้อนเดียวเลือกให้เลย */
+    };
+    lotSel.onchange=()=>{
+      formDirty=true;
+      if(lotSel.value==='__new__'){ lotTxt.style.display='block'; lotTxt.value=''; lotTxt.focus&&lotTxt.focus(); }
+      else { lotTxt.style.display='none'; lotTxt.value=lotSel.value; }
+      updateHint();
+    };
+    lotTxt.oninput=()=>{ formDirty=true; updateHint(); };
     const updateHint=()=>{
       const hint=d.querySelector('.rowLotHint');
       const n=rowFiberName(d);
@@ -1747,24 +1811,34 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const total=r3(withRemain.reduce((s,l)=>s+Math.max(0,l.remaining),0));
       const active=withRemain.filter(l=>l.remaining>0).sort((a,b)=>a.lotNo-b.lotNo)[0];
       const balesLeft=STOCKFIBER_BALES[n];
+      const cur=rowLotNo(d);
+      const curRow=withRemain.find(l=>String(l.lotNo)===String(cur));
       hint.innerHTML='คงเหลือในสต๊อกรวม <b style="color:'+(total<=0?'var(--red)':'var(--accent2)')+'">'+total+' กก.</b>'+
         (balesLeft!=null?' (<b style="color:var(--accent2)">'+balesLeft+' ก้อน</b>)':'')+
-        (active?' — ล็อตที่จะเบิกต่อไปคือ ล็อต '+esc(active.lotNo)+' (เหลือ '+active.remaining+' กก.)':' <span class="bdg bad">ใยหมดสต๊อกแล้ว</span>')+
-        '<br><span style="color:var(--dim)">เบอร์แท็กก้อนที่ใช้จริง แท็กที่การ์ด "ก้อนใยที่กำลังใช้อยู่" ด้านบน — กดเปลี่ยนก้อนได้ทุกครั้งที่หยิบก้อนใหม่</span>';
+        (cur
+          ? ' — ใช้ก้อน/ล็อต <b style="color:var(--accent2)">'+esc(cur)+'</b>'+
+            (curRow ? ' เหลือ '+curRow.remaining+' กก.' : ' <span class="bdg warn">ไม่มีเบอร์นี้ในสต๊อก</span>')
+          : (active?' — ยังไม่ได้เลือกเบอร์ก้อน ระบบจะเริ่มจากล็อต '+esc(active.lotNo)+' ให้เอง':' <span class="bdg bad">ใยหมดสต๊อกแล้ว</span>'))+
+        '<br><span style="color:var(--dim)">ก้อนที่เลือกไว้หมดเมื่อไหร่ ระบบสลับไปก้อนถัดไปของใยชื่อเดียวกันให้เอง แล้วบันทึกไว้ในประวัติ</span>';
     };
     sel.onchange=()=>{
       formDirty=true;
       if(sel.value==='__new__'){ txt.style.display='block'; txt.value=''; }
       else { txt.style.display='none'; txt.value=sel.value; }
-      recSumLine(); updateHint();
+      fillLots(''); recSumLine(); updateHint();
     };
-    txt.oninput=()=>{ formDirty=true; recSumLine(); updateHint(); };
+    txt.oninput=()=>{ formDirty=true; recSumLine(); fillLots(rowLotNo(d)); updateHint(); };
     d.querySelector('.rk').oninput=()=>{ formDirty=true; recSumLine(); };
     d.querySelector('.rtag').oninput=()=>{ formDirty=true; };
     d.querySelector('.x').onclick=()=>{ d.remove(); formDirty=true; recSumLine(); };
-    $('recRows').appendChild(d); recSumLine(); updateHint();
+    $('recRows').appendChild(d); fillLots(lotNo); recSumLine(); updateHint();
   }
   $('btnAddRecRow').onclick=()=>addRecRow();
+  function rowLotNo(r){
+    const s2=r.querySelector('.rlotSel'), t2=r.querySelector('.rlot');
+    if(s2 && s2.value && s2.value!=='__new__') return s2.value;
+    return t2 ? t2.value.trim() : '';
+  }
 
   function rowFiberName(r){
     const sel=r.querySelector('.rsel'), txt=r.querySelector('.rn');
@@ -1773,7 +1847,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   }
   function readRecRows(){
     return Array.from(document.querySelectorAll('#recRows .frow')).map(r=>({
-      name:rowFiberName(r), kg:+r.querySelector('.rk').value||0, tagNo:r.querySelector('.rtag').value.trim()
+      name:rowFiberName(r), kg:+r.querySelector('.rk').value||0,
+      tagNo:r.querySelector('.rtag').value.trim(), lot:rowLotNo(r)
     })).filter(f=>f.name);
   }
   function recSumLine(){
@@ -1788,7 +1863,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const o=orderById($('recSel').value);
     const w=$('recRows'); w.innerHTML=''; w.dataset.init='1';
     $('recTarget').value=o&&o.recipeTargetKg?o.recipeTargetKg:'';
-    if(o&&o.fibers.length) o.fibers.forEach(f=>addRecRow(f.name,f.kg,f.tagNo)); else addRecRow();
+    if(o&&o.fibers.length) o.fibers.forEach(f=>addRecRow(f.name,f.kg,f.tagNo,f.lot)); else addRecRow();
     recSumLine();
   }
   $('recSel').onchange=loadRecipe;
@@ -2312,27 +2387,41 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if(o.autoCutFiber===false) return null;
     const rec=(o.fibers||[]).filter(f=>f.name && (+f.kg||0)>0);
     if(!rec.length) return null;
-    const msgs=[], shorts=[], noTag=[];
+    const msgs=[], shorts=[], switched=[];
+    o.lotLog=o.lotLog||[];
     rec.forEach(f=>{
       let remain=+f.kg||0;
-      const tag=currentBale(o,f.name);
-      if(!tag) noTag.push(f.name);
-      const lots=fiberLotsNow(f.name).filter(l=>l.remaining>0);
-      for(const l of lots){
+      /* ไล่ลำดับ: ก้อนที่เลือกไว้ในสูตรก่อน แล้วค่อยก้อนอื่นของใยชื่อเดียวกันตามเบอร์ */
+      const order=()=>{
+        const live=fiberLotsNow(f.name).filter(l=>l.remaining>0);
+        const pinned=live.filter(l=>String(l.lot)===String(f.lot||''));
+        const rest=live.filter(l=>String(l.lot)!==String(f.lot||'')).sort((a,b)=>a.lot-b.lot);
+        return pinned.concat(rest);
+      };
+      for(const l of order()){
         if(remain<=0.0000001) break;
         const take=Math.min(l.remaining, remain);
-        if(take>0){
-          S.wd.push({ id:uid(), time:localISO(), orderId:o.id, seq:tag,
-            fiberName:f.name, lot:l.lot, kg:r3(take), note:'หักอัตโนมัติ (ป้อนใย 1 รอบ)',
-            auto:true, feedId:feedId||null, offRecipe:false });
-          remain=r3(remain-take);
+        if(take<=0) continue;
+        /* เปลี่ยนก้อน: บันทึกไว้ในประวัติแล้วย้ายสูตรไปก้อนใหม่ */
+        if(String(l.lot)!==String(f.lot||'')){
+          const from=f.lot||'';
+          f.lot=String(l.lot);
+          const line={ time:localISO(), fiberName:f.name, from:from, to:String(l.lot),
+            toRemaining:r3(l.remaining), orderId:o.id };
+          o.lotLog.push(line);
+          switched.push(f.name+': '+(from?'ก้อน '+from+' หมด → ':'เริ่ม ')+'ก้อน '+l.lot);
         }
+        S.wd.push({ id:uid(), time:localISO(), orderId:o.id, seq:String(l.lot),
+          fiberName:f.name, lot:l.lot, kg:r3(take), note:'หักอัตโนมัติ (ป้อนใย 1 รอบ)',
+          auto:true, feedId:feedId||null, offRecipe:false });
+        remain=r3(remain-take);
       }
       const left=fiberRemainTotal(f.name);
       msgs.push(f.name+' เหลือ '+left+' กก.');
       if(remain>0.0000001) shorts.push(f.name+' ขาด '+r3(remain)+' กก.');
     });
-    return { msgs, shorts, noTag };
+    if(switched.length || rec.length) saveOrders();
+    return { msgs, shorts, switched };
   }
   /* กันพิมพ์ผิด — ตัวเลขที่ผิดจุดทศนิยมทำให้สต๊อกหายเป็นร้อยกิโลโดยไม่มีใครรู้ */
   function stockBagWeight(kind,name){

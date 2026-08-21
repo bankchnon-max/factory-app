@@ -653,7 +653,7 @@ window.WPDAUTH = {
   async function get(key){
     await wpdRequireSession();
     let r = await fetch(base + '?id=eq.' + encodeURIComponent(key) + '&select=value', { headers: headers() });
-    if (r.status === 401 || r.status === 403) {          /* token หมดอายุ/ถูกยกเลิก — ให้ล็อกอินใหม่แล้วลองอีกครั้ง */
+    if (r.status === 401 || r.status === 403) {
       if (!(await wpdRefresh())) { wpdSaveSession(null); await wpdShowLogin('เซสชันหมดอายุ — เข้าสู่ระบบอีกครั้ง'); }
       r = await fetch(base + '?id=eq.' + encodeURIComponent(key) + '&select=value', { headers: headers() });
     }
@@ -668,7 +668,7 @@ window.WPDAUTH = {
       headers: Object.assign(headers(), { 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
       body: JSON.stringify([{ id: key, value: value, shared: true, updated_at: new Date().toISOString() }]) });
     let r = await doPost();
-    if (r.status === 401 || r.status === 403) {          /* token หมดอายุ/ถูกยกเลิก — ให้ล็อกอินใหม่แล้วลองอีกครั้ง */
+    if (r.status === 401 || r.status === 403) {
       if (!(await wpdRefresh())) { wpdSaveSession(null); await wpdShowLogin('เซสชันหมดอายุ — เข้าสู่ระบบอีกครั้ง'); }
       r = await doPost();
     }
