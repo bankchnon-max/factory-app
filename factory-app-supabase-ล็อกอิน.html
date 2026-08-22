@@ -863,6 +863,9 @@ window.WPDAUTH = {
   function shortDT(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7)+' '+iso.slice(11,16); }
   const minsBetween = (a,b) => Math.round((new Date(a)-new Date(b))/60000);
 
+  /* วันที่เริ่มเก็บ 2 ไซซ์ต่อถุง — ถุงที่ตัดก่อนหน้านี้ เลขไซซ์ที่ลงไว้คือ "ไซซ์สำเร็จหลังเย็บ" */
+  const CUTSIZE_SINCE = '2026-08-22';
+
   /* ---------- PURE CALC (unit-tested) ---------- */
   const CALC = {
     // ---------- ผ้า: ถุงบรรจุผ้า (ตัด→ส่งเย็บ→รับกลับ→เบิกบรรจุ) เหมือนกับที่แอพสต๊อกใช้ ----------
@@ -873,9 +876,12 @@ window.WPDAUTH = {
       (fabricWd||[]).forEach(w=>(w.picks||[]).forEach(p=>{ wdByBatch[p.batchId]=(wdByBatch[p.batchId]||0)+(+p.qty||0); }));
       return (cutBatches||[]).map(b=>{
         const sent=sentByBatch[b.id]||0, returned=retByBatch[b.id]||0, withdrawn=wdByBatch[b.id]||0;
-        /* ไซซ์ที่ใช้ตอนเบิก/ตั้งสเปค = ไซซ์สำเร็จหลังเย็บ (ตัด 18x32 → เย็บเสร็จ 17.5x26) */
+        /* ไซซ์ที่ใช้ตอนเบิก/ตั้งสเปค = ไซซ์สำเร็จหลังเย็บ (ตัด 18x32 → เย็บเสร็จ 17.5x26)
+           ถุงเก่าที่ตัดก่อนเปลี่ยนระบบ ไซซ์ตัดไม่เคยถูกบันทึก → cutSize = null */
+        const cutKnown = !!b.sizeFinished || String(b.time||'') >= CUTSIZE_SINCE;
         return { batchId:b.id, batchNo:b.batchNo, fabricType:b.fabricType,
-          size:(b.sizeFinished||b.size), cutSize:b.size, sizeFinished:(b.sizeFinished||b.size),
+          size:(b.sizeFinished||b.size), cutSize:(cutKnown?b.size:null), cutKnown:cutKnown,
+          sizeFinished:(b.sizeFinished||b.size),
           qtyCut:b.qtyCut, time:b.time,
           sent, returned, withdrawn, readyBalance: r2(returned-withdrawn) };
       });

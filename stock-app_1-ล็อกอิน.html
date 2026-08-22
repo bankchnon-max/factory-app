@@ -708,7 +708,14 @@ window.WPDAUTH = {
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
   function hhmm(iso){ return (iso||'').slice(11,19); }
   function ymd(iso){ return (iso||'').slice(0,10); }
+  /* วันที่แบบที่เขียนบนถุงจริง เช่น 22/8/2569 */
+  function thDate(iso){ if(!iso) return ''; const d=String(iso).slice(0,10).split('-');
+    if(d.length<3) return ''; return (+d[2])+'/'+(+d[1])+'/'+(+d[0]+543); }
   function todayStr(){ return localISO().slice(0,10); }
+
+  /* วันที่เริ่มเก็บ 2 ไซซ์ต่อถุง — ถุงที่ตัดก่อนหน้านี้ เลขไซซ์ที่ลงไว้คือ "ไซซ์สำเร็จหลังเย็บ"
+     (ยืนยันจากหน้างาน) ไซซ์ตัดจริงของถุงพวกนั้นไม่เคยถูกบันทึกไว้ */
+  const CUTSIZE_SINCE = '2026-08-22';
 
   /* ---------- PURE CALC (unit-tested) ---------- */
   const CALC = {
@@ -791,8 +798,11 @@ window.WPDAUTH = {
       (fabricWithdraw||[]).forEach(w=>(w.picks||[]).forEach(p=>{ wdByBatch[p.batchId]=(wdByBatch[p.batchId]||0)+(+p.qty||0); }));
       return (cutBatches||[]).map(b=>{
         const sent=sentByBatch[b.id]||0, returned=retByBatch[b.id]||0, withdrawn=wdByBatch[b.id]||0;
+        /* ของเก่า (ตัดก่อนเปลี่ยนระบบ และไม่เคยกรอกไซซ์สำเร็จ) = เลขที่ลงไว้คือไซซ์สำเร็จ ไซซ์ตัดไม่ทราบ */
+        const cutKnown = !!b.sizeFinished || String(b.time||'') >= CUTSIZE_SINCE;
         return { batchId:b.id, batchNo:b.batchNo, fabricType:b.fabricType, size:b.size,
-          cutSize:b.size, sizeFinished:(b.sizeFinished||b.size), qtyCut:b.qtyCut, time:b.time, rollNo:b.rollNo,
+          cutSize:(cutKnown?b.size:null), cutKnown:cutKnown,
+          sizeFinished:(b.sizeFinished||b.size), qtyCut:b.qtyCut, time:b.time, rollNo:b.rollNo,
           sent, returned, withdrawn,
           cutBalance: r2(b.qtyCut-sent), sewingBalance: r2(sent-returned), readyBalance: r2(returned-withdrawn) };
       });
@@ -1288,21 +1298,24 @@ window.WPDAUTH = {
       bl=bl.filter(x=>x.qtyCut>0).sort((a,b)=>String(b.time).localeCompare(String(a.time)));
       $('tCutBatchList').innerHTML=bl.length
         ? '<tr><th>ถุง #</th><th>ชนิดผ้า</th><th>ไซซ์ตัด</th><th>ไซซ์สำเร็จ</th><th>ตัดวันที่</th><th>ตัดได้</th><th>รับกลับ</th><th>เบิกไปแล้ว</th><th>พร้อมเบิก</th></tr>'+
-          bl.slice(0,200).map(b=>'<tr><td class="kn">#'+b.batchNo+'</td><td>'+esc(b.fabricType)+'</td><td>'+esc(b.cutSize)+'</td>'+
-            '<td>'+(b.sizeFinished!==b.cutSize?'<b style="color:var(--accent2)">'+esc(b.sizeFinished)+'</b>':'<span style="color:var(--dim)">เท่าไซซ์ตัด</span>')+'</td>'+
-            '<td>'+ymd(b.time)+'</td><td>'+b.qtyCut+'</td><td>'+b.returned+'</td><td>'+b.withdrawn+'</td>'+
+          bl.slice(0,200).map(b=>'<tr><td class="kn">#'+b.batchNo+'</td><td>'+esc(b.fabricType)+'</td>'+
+            '<td>'+(b.cutKnown?esc(b.cutSize):'<span style="color:var(--dim)">— ของเก่า</span>')+'</td>'+
+            '<td>'+(!b.cutKnown?esc(b.sizeFinished)
+                   :(b.sizeFinished!==b.cutSize?'<b style="color:var(--accent2)">'+esc(b.sizeFinished)+'</b>'
+                                               :'<span style="color:var(--dim)">เท่าไซซ์ตัด</span>'))+'</td>'+
+            '<td class="kn">'+thDate(b.time)+'</td><td>'+b.qtyCut+'</td><td>'+b.returned+'</td><td>'+b.withdrawn+'</td>'+
             '<td><b style="color:'+(b.readyBalance>0?'var(--accent2)':'var(--dim)')+'">'+b.readyBalance+'</b></td></tr>').join('')
         : '<tr><td class="empty">ยังไม่มีถุงที่ตัดไว้</td></tr>';
     }
 
-    $('tBatchStatus').innerHTML=batchStatus.length?'<tr><th>ถุง #</th><th>ชนิดผ้า</th><th>ไซซ์</th><th>ตัดได้</th><th>รอส่งเย็บ</th><th>ที่ช่างเย็บ</th><th>รับกลับ</th><th>เบิกแล้ว</th><th>พร้อมผลิต</th><th></th></tr>'+
-      batchStatus.slice().sort((a,b)=>b.time<a.time?-1:1).map(b=>'<tr><td>#'+b.batchNo+'</td><td>'+esc(b.fabricType)+'</td><td>'+esc(b.size)+'</td><td>'+b.qtyCut+
+    $('tBatchStatus').innerHTML=batchStatus.length?'<tr><th>ถุง #</th><th>ชนิดผ้า</th><th>ไซซ์</th><th>ตัดวันที่</th><th>ตัดได้</th><th>รอส่งเย็บ</th><th>ที่ช่างเย็บ</th><th>รับกลับ</th><th>เบิกแล้ว</th><th>พร้อมผลิต</th><th></th></tr>'+
+      batchStatus.slice().sort((a,b)=>b.time<a.time?-1:1).map(b=>'<tr><td>#'+b.batchNo+'</td><td>'+esc(b.fabricType)+'</td><td>'+esc(b.size)+'</td><td class="kn">'+thDate(b.time)+'</td><td>'+b.qtyCut+
         '</td><td>'+b.cutBalance+'</td><td>'+b.sewingBalance+'</td><td>'+b.returned+'</td><td>'+b.withdrawn+'</td><td><b style="color:'+(b.readyBalance>0?'var(--accent2)':'var(--dim)')+'">'+b.readyBalance+'</b></td>'+
         '<td><button class="ed" data-btadj="'+b.batchId+'">ปรับยอดคงเหลือ</button> <button class="x" data-btrm="'+b.batchId+'">✕</button></td></tr>').join('')
       :'<tr><td class="empty">ยังไม่มีการตัดผ้า</td></tr>';
     $('tBatchStatus').querySelectorAll('[data-btadj]').forEach(btn=>btn.onclick=async()=>{
       const b=batchStatus.find(x=>x.batchId===btn.dataset.btadj); if(!b) return;
-      const input=await askText2('ปรับ "จำนวนที่ตัดได้" ของถุง #'+b.batchNo+' ('+b.fabricType+' '+b.size+') เป็นเท่าไหร่ (ชิ้น)\n\nตอนนี้ตัดไว้ '+b.qtyCut+' ชิ้น', b.qtyCut);
+      const input=await askText2('ปรับ "จำนวนที่ตัดได้" ของถุง #'+b.batchNo+' ('+b.fabricType+' '+b.size+' · ตัด '+thDate(b.time)+') เป็นเท่าไหร่ (ชิ้น)\n\nตอนนี้ตัดไว้ '+b.qtyCut+' ชิ้น', b.qtyCut);
       if(input===null) return;
       const newQty=+input; if(isNaN(newQty)||newQty<0){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
       const batch=S.cutBatches.find(x=>x.id===b.batchId); if(!batch) return;
@@ -1315,7 +1328,7 @@ window.WPDAUTH = {
       const linkedSent=S.sewSent.filter(s=>s.batchId===b.batchId).length;
       const linkedRet=S.sewReturns.filter(s=>s.batchId===b.batchId).length;
       const warnExtra=(linkedSent||linkedRet)?('\n\nจะลบประวัติส่งเย็บ '+linkedSent+' รายการ และรับกลับ '+linkedRet+' รายการ ที่ผูกกับถุงนี้ไปด้วย'):'';
-      if(!await ask('ลบถุง #'+b.batchNo+' ('+b.fabricType+' '+b.size+') ทิ้งทั้งหมด?', 'การลบนี้กู้คืนไม่ได้'+warnExtra)) return;
+      if(!await ask('ลบถุง #'+b.batchNo+' ('+b.fabricType+' '+b.size+' · ตัด '+thDate(b.time)+') ทิ้งทั้งหมด?', 'การลบนี้กู้คืนไม่ได้'+warnExtra)) return;
       S.cutBatches=S.cutBatches.filter(x=>x.id!==b.batchId);
       S.sewSent=S.sewSent.filter(s=>s.batchId!==b.batchId);
       S.sewReturns=S.sewReturns.filter(s=>s.batchId!==b.batchId);
@@ -1362,7 +1375,8 @@ window.WPDAUTH = {
       const fab=$(fabId).value, size=$(sizeId).value;
       const opts=batchStatus.filter(b=>b.fabricType===fab && b.size===size && b[balanceKey]>0);
       const _needPick = !fab || !size;
-      sel.innerHTML=opts.length?opts.map(b=>'<option value="'+b.batchId+'">ถุง #'+b.batchNo+' — '+esc(b.size||'')+' (เหลือ'+labelSuffix+' '+b[balanceKey]+' ชิ้น)</option>').join('')
+      sel.innerHTML=opts.length?opts.map(b=>'<option value="'+b.batchId+'">ถุง #'+b.batchNo+' · '+esc(b.size||'')+
+        ' · ตัด '+thDate(b.time)+' (เหลือ'+labelSuffix+' '+b[balanceKey]+' ชิ้น)</option>').join('')
         :'<option value="">'+(_needPick?'— เลือกชนิดผ้าและไซซ์ก่อน —':'— ไม่มีถุงที่พร้อม'+labelSuffix+' —')+'</option>';
     }
     refreshBatchSel('sewBatchSel','sewFabSel','sewSizeSel','cutBalance','ส่ง');
@@ -1672,7 +1686,10 @@ window.WPDAUTH = {
     if(!sel||!hint) return;
     const b=S.cutBatches.find(x=>x.id===sel.value);
     if(!b){ hint.textContent=''; return; }
-    hint.innerHTML='ถุงนี้ตัดไว้ไซซ์ <b style="color:var(--accent2)">'+esc(b.size)+'</b>'+
+    const _old = !b.sizeFinished && String(b.time||'') < CUTSIZE_SINCE;
+    hint.innerHTML=(_old?'ถุงเก่า — เลขที่ลงไว้คือไซซ์สำเร็จ <b style="color:var(--accent2)">'+esc(b.size)+'</b>'
+                        :'ถุงนี้ตัดไว้ไซซ์ <b style="color:var(--accent2)">'+esc(b.size)+'</b>')+
+      ' · ตัด '+thDate(b.time)+
       (b.sizeFinished&&b.sizeFinished!==b.size?' · เคยลงไซซ์สำเร็จไว้ '+esc(b.sizeFinished):'')+
       '<br><span style="color:var(--muted)">เว้นว่าง = ไซซ์เท่าเดิม</span>';
     if(fin && !fin.value && b.sizeFinished && b.sizeFinished!==b.size) fin.value=b.sizeFinished;
