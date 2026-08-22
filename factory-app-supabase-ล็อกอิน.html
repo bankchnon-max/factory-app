@@ -241,18 +241,20 @@
         <h3>รายการป้อนใยวันนี้</h3>
         <div class="scr"><table id="tFeed"></table></div>
       </div>
-      <div class="card">
-        <h3>เบิกใยเพิ่มเอง (ใช้เฉพาะกรณีพิเศษ)</h3>
+      <div class="card" id="cardWd">
+        <h3>เบิกใย — ยกก้อนใหม่มาที่ไลน์</h3>
+        <p class="sumline" style="margin-top:-4px;">หยิบก้อนไหนก็ได้ ขอให้ชื่อใยตรงกับสูตร แล้วกรอกเบอร์ที่เขียนบนก้อนนั้น<br>
+        <span style="color:var(--muted)">ก้อนที่ใช้อยู่หมดเมื่อไหร่ ก้อนที่เบิกรอไว้จะมาแทนที่ให้เอง</span></p>
         <div class="sumline" id="wdDupWarn" style="margin-bottom:6px;"></div>
         <div class="rf">
-          <div><label>หมายเลขก้อน</label><input id="wdSeq" inputmode="text" placeholder="เลขที่ก้อนใย"></div>
+          <div><label>เบอร์ก้อนที่หยิบมา</label><input id="wdSeq" inputmode="text" placeholder="เลขที่เขียนบนก้อน"></div>
           <div><label>ชื่อใย</label><select id="wdSel"></select>
             <input id="wdName" list="dlFiber" placeholder="พิมพ์ชื่อใย" style="display:none;"><datalist id="dlFiber"></datalist></div>
         </div>
         <div id="wdWarn" class="sumline"></div>
         <div class="rf">
-          <div><label>ลอตที่รับเข้า / Lot (จากแอพสต๊อก)</label><select id="wdLot"><option value="">— เลือกใยก่อน —</option></select></div>
-          <div><label>น้ำหนักที่เบิก (กก.)</label><input id="wdKg" type="number" inputmode="decimal" step="0.01"></div>
+          <div><label>ก้อนไหนในสต๊อก (เลือกให้ตรงกับเบอร์ที่หยิบมา)</label><select id="wdLot"><option value="">— เลือกใยก่อน —</option></select></div>
+          <div><label>น้ำหนักก้อนนี้ (กก.)</label><input id="wdKg" type="number" inputmode="decimal" step="0.01" placeholder="เลือกก้อนแล้วเติมให้อัตโนมัติ"></div>
         </div>
         <div class="sumline" id="wdLotHint"></div>
         <label>หมายเหตุ</label>
@@ -363,9 +365,15 @@
           <div><label>ชนิดผ้า</label><select id="fwFabSel"></select></div>
           <div><label>ไซซ์</label><select id="fwSizeSel"></select></div>
         </div>
-        <label>ต้องการกี่ชิ้น</label><input id="fwQty" type="number" inputmode="numeric" placeholder="เช่น 2000">
+        <div class="rf" style="align-items:flex-end;">
+          <div><label>อยากได้กี่ชิ้น (ไม่บังคับ — ไว้ให้ระบบติ๊กให้)</label>
+          <input id="fwQty" type="number" inputmode="numeric" placeholder="เช่น 2000"></div>
+          <div><button class="btn sec" id="btnFwAuto" style="margin-top:0;">✓ ติ๊กให้พอตามจำนวน</button></div>
+        </div>
+        <div class="sumline" style="margin-top:10px; font-weight:600;">ติ๊กถุงที่หยิบมาใช้จริง</div>
+        <div id="fwList" class="scr" style="max-height:320px;"></div>
         <div class="sumline" id="fwPreview" style="margin-top:8px;"></div>
-        <button class="btn w" id="btnFabWd">ยืนยันเบิกทั้งหมด</button>
+        <button class="btn w" id="btnFabWd">ยืนยันเบิกถุงที่ติ๊กไว้</button>
         <div class="scr" style="margin-top:11px;"><table id="tFabWdHist"></table></div>
       </div>
       <div class="card">
@@ -374,8 +382,9 @@
         <div class="rf">
           <div><label>ประเภท</label><select id="bwKindSel"><option value="zip">ถุงซิล</option><option value="pack">ถุงแพ็ค</option></select></div>
           <div><label>ชื่อถุง</label><select id="bwNameSel"></select></div>
+          <div><label>กระสอบไหนที่หยิบมา</label><select id="bwSackSel"><option value="">— เลือกชื่อถุงก่อน —</option></select></div>
         </div>
-        <label>ต้องการกี่กิโล</label><input id="bwQty" type="number" inputmode="decimal" step="0.1" placeholder="เช่น 12.5">
+        <label>น้ำหนักกระสอบนี้ (กก.)</label><input id="bwQty" type="number" inputmode="decimal" step="0.1" placeholder="เลือกกระสอบแล้วเติมให้อัตโนมัติ">
         <div class="sumline" id="bwPreview" style="margin-top:8px;"></div>
         <button class="btn w" id="btnBagWd">ยืนยันเบิกทั้งหมด</button>
         <div class="scr" style="margin-top:11px;"><table id="tBagWdHist"></table></div>
@@ -864,7 +873,10 @@ window.WPDAUTH = {
       (fabricWd||[]).forEach(w=>(w.picks||[]).forEach(p=>{ wdByBatch[p.batchId]=(wdByBatch[p.batchId]||0)+(+p.qty||0); }));
       return (cutBatches||[]).map(b=>{
         const sent=sentByBatch[b.id]||0, returned=retByBatch[b.id]||0, withdrawn=wdByBatch[b.id]||0;
-        return { batchId:b.id, batchNo:b.batchNo, fabricType:b.fabricType, size:b.size, qtyCut:b.qtyCut, time:b.time,
+        /* ไซซ์ที่ใช้ตอนเบิก/ตั้งสเปค = ไซซ์สำเร็จหลังเย็บ (ตัด 18x32 → เย็บเสร็จ 17.5x26) */
+        return { batchId:b.id, batchNo:b.batchNo, fabricType:b.fabricType,
+          size:(b.sizeFinished||b.size), cutSize:b.size, sizeFinished:(b.sizeFinished||b.size),
+          qtyCut:b.qtyCut, time:b.time,
           sent, returned, withdrawn, readyBalance: r2(returned-withdrawn) };
       });
     },
@@ -1012,7 +1024,7 @@ window.WPDAUTH = {
   };
 
   /* ---------- STATE ---------- */
-  let S = { orders:[], activeId:null, activeFeedId:null, fiberMaster:[], feed:[], wd:[], fabricWd:[], bagWd:[], gasSwaps:[], line:[], scrap:[], breaks:[], settings:{gapMin:20} };
+  let S = { orders:[], activeId:null, activeFeedId:null, fiberMaster:[], feed:[], wd:[], use:[], fabricWd:[], bagWd:[], bagUse:[], gasSwaps:[], line:[], scrap:[], breaks:[], settings:{gapMin:20} };
   let officeView='feed', current='order', lastHash='', modalOpen=0, ordersSig='';
 
   /* ---------- STORAGE (4 keys, parallel) ---------- */
@@ -1032,7 +1044,7 @@ window.WPDAUTH = {
   const pending={}, inflight={};
   function snapshot(k){
     if(k==='v3_orders') return {orders:S.orders,activeId:S.activeId,activeFeedId:S.activeFeedId,fiberMaster:S.fiberMaster||[]};
-    if(k==='v3_feed')   return {feed:S.feed,wd:S.wd,fabricWd:S.fabricWd,bagWd:S.bagWd,gasSwaps:S.gasSwaps};
+    if(k==='v3_feed')   return {feed:S.feed,wd:S.wd,use:S.use,fabricWd:S.fabricWd,bagWd:S.bagWd,bagUse:S.bagUse,gasSwaps:S.gasSwaps};
     if(k==='v3_line')   return {line:S.line,scrap:S.scrap,breaks:S.breaks};
     return S.settings;
   }
@@ -1110,7 +1122,7 @@ window.WPDAUTH = {
         due:null,status:'pending',startedAt:null,finishedAt:null,createdAt:localISO() }];
       await saveOrders();
     }
-    S.feed=B.feed||[]; S.wd=B.wd||[]; S.fabricWd=B.fabricWd||[]; S.bagWd=B.bagWd||[]; S.gasSwaps=B.gasSwaps||[]; S.line=C.line||[]; S.scrap=C.scrap||[]; S.breaks=C.breaks||[];
+    S.feed=B.feed||[]; S.wd=B.wd||[]; S.use=B.use||[]; S.fabricWd=B.fabricWd||[]; S.bagWd=B.bagWd||[]; S.bagUse=B.bagUse||[]; S.gasSwaps=B.gasSwaps||[]; S.line=C.line||[]; S.scrap=C.scrap||[]; S.breaks=C.breaks||[];
     if (D) S.settings=D;
     STOCKFIBER = {};
     (SF.receipts||[]).forEach(r=>{ (STOCKFIBER[r.fiberName]=STOCKFIBER[r.fiberName]||[]).push({lotNo:r.lotNo,kg:r.kg,time:r.time,baleCount:r.baleCount}); });
@@ -1494,9 +1506,10 @@ window.WPDAUTH = {
           : '<div class="sumline">ยังไม่ได้ตั้งสูตร — ตั้งค่าที่การ์ดล่างสุด</div>');
     }
     if($('wdDupWarn')){
-      $('wdDupWarn').innerHTML = (o && o.autoCutFiber!==false)
-        ? '<span class="bdg warn">ระบบหักใยให้อัตโนมัติทุกรอบป้อนอยู่แล้ว — เบิกตรงนี้เพิ่มยอดจะถูกหัก<b>ซ้ำ</b> ใช้เฉพาะตอนเบิกใยไปใช้นอกไลน์</span>'
-        : '<span style="color:var(--dim)">ปิดหักอัตโนมัติอยู่ — ต้องเบิกใยเองทุกครั้งที่เปลี่ยนก้อน</span>';
+      const need=(o?(o.fibers||[]):[]).filter(f=>f.name&&(+f.kg||0)>0&&!baleAtLine(f.name)).map(f=>f.name);
+      $('wdDupWarn').innerHTML = need.length
+        ? '<span class="bdg bad">ยังไม่มีก้อนที่ไลน์: '+need.map(esc).join(', ')+' — เบิกก่อนถึงจะป้อนใยได้</span>'
+        : '';
     }
     /* การ์ดก้อนใยที่กำลังใช้ */
     if($('baleList')){
@@ -1506,50 +1519,38 @@ window.WPDAUTH = {
         bl.innerHTML='<div class="empty">ยังไม่ได้ตั้งสูตร — ตั้งที่การ์ดล่างสุดก่อน</div>';
       } else {
         bl.innerHTML=o.fibers.filter(f=>f.name).map(f=>{
-          const cur=f.lot||'';
-          const all=fiberLotsNow(f.name);
-          const curRow=all.find(l=>String(l.lot)===String(cur));
-          const left=fiberRemainTotal(f.name);
-          const live=all.filter(l=>l.remaining>0);
-          const nextLot=live.filter(l=>String(l.lot)!==String(cur)).sort((a,b)=>a.lot-b.lot)[0];
+          const at=baleAtLine(f.name), wait=baleWaiting(f.name);
+          const stock=fiberRemainTotal(f.name);
+          const rounds=(at&&(+f.kg||0)>0)?Math.floor((lineTotal(f.name))/(+f.kg))
+                                         :0;
           return '<div class="rf" style="align-items:center; border-top:1px solid var(--border); padding-top:9px; margin-top:9px;">'+
             '<div><div class="kn" style="font-size:15px;">'+esc(f.name)+' <span style="color:var(--dim); font-size:12px;">'+f.kg+' กก./รอบ</span></div>'+
             '<div class="sumline" style="margin-top:2px;">'+
-              (cur
-                ? 'ก้อนที่ใช้อยู่ <b style="color:var(--accent2)">'+esc(curRow?baleLabel(f.name,curRow):('เบอร์ '+cur))+'</b>'+
-                  (curRow ? ' — เหลือ <b style="color:'+(curRow.remaining<=0?'var(--red)':'var(--accent2)')+'">'+curRow.remaining+' กก.</b>'
-                          : ' <span class="bdg warn">ไม่มีเบอร์นี้ในสต๊อก</span>')
-                : '<span class="bdg warn">ยังไม่ได้เลือกเบอร์ก้อน</span>')+
-              '<br>ใยนี้เหลือทั้งหมด '+left+' กก.'+
-              (nextLot?' · ก้อนถัดไป เบอร์ '+esc(nextLot.lot)+' ('+nextLot.kg+' กก. เหลือ '+nextLot.remaining+' กก.)'
-                      :(left>0?'':' <span class="bdg bad">หมดสต๊อก</span>'))+
+              (at
+                ? 'กำลังใช้ <b style="color:var(--accent2)">ก้อน '+esc(at.no)+'</b> ('+at.kg+' กก.) — เหลือ '+
+                  '<b style="color:'+(at.remaining<=0?'var(--red)':'var(--accent2)')+'">'+at.remaining+' กก.</b>'
+                : '<span class="bdg bad">ยังไม่มีก้อนที่ไลน์ — กดเบิกใยก่อน</span>')+
+              '<br>'+(wait.length
+                ? 'เบิกรอไว้อีก <b style="color:var(--accent2)">'+wait.length+' ก้อน</b> — '+wait.map(b=>'#'+esc(b.no)+' ('+b.remaining+' กก.)').join(', ')
+                : '<span style="color:var(--yellow)">ไม่มีก้อนสำรองรอไว้ — ก้อนนี้หมดแล้วต้องเบิกใหม่</span>')+
+              (rounds>0?' · ใยที่ไลน์พอทำอีกราว <b>'+rounds+' รอบ</b>':'')+
+              '<br><span style="color:var(--dim)">ในสต๊อกยังมี '+stock+' กก.</span>'+
             '</div></div>'+
-            '<button class="btn sec sm" data-bale="'+esc(f.name)+'" style="flex:0 0 auto;">🔄 เปลี่ยนก้อน</button></div>';
+            '<button class="btn sm" data-wdgo="'+esc(f.name)+'" style="flex:0 0 auto;">➕ เบิกก้อนใหม่</button></div>';
         }).join('');
-        bl.querySelectorAll('[data-bale]').forEach(b=>b.onclick=async()=>{
-          const name=b.dataset.bale;
-          const f=(o.fibers||[]).find(x=>x.name===name); if(!f) return;
-          const cur=f.lot||'';
-          const live=fiberLotsNow(name).filter(l=>l.remaining>0);
-          const next=live.filter(l=>String(l.lot)!==String(cur)).sort((a,b)=>a.lot-b.lot)[0];
-          const v=await askText('เปลี่ยนก้อนใย — '+name,
-            (cur?'ก้อนที่ใช้อยู่: #'+cur+'\n':'')+
-            (live.length?'ก้อนที่ยังมีของในสต๊อก:\n'+live.map(l=>'  '+baleLabel(name,l)+' — เหลือ '+l.remaining+' กก.').join('\n')+'\n':'ไม่มีก้อนที่เหลือของในสต๊อกเลย\n')+
-            '\nพิมพ์เบอร์ก้อนใหม่ที่หยิบมาใช้ — รอบป้อนใยหลังจากนี้จะหักจากก้อนนี้',
-            next?String(next.lot):'');
-          if(v==null) return;
-          const t=String(v).trim();
-          if(!t){ toast('ยังไม่ได้พิมพ์เบอร์ก้อน'); return; }
-          if(t===cur){ toast('เบอร์ก้อนเหมือนเดิม ไม่ได้เปลี่ยนอะไร'); return; }
-          const hit=fiberLotsNow(name).find(l=>String(l.lot)===t);
-          if(!hit && !await ask('ไม่มีเบอร์ '+t+' ในสต๊อก','ใย "'+name+'" ไม่มีก้อน/ล็อตเบอร์นี้ในแอพสต๊อก\n\nยืนยันจะใช้เบอร์นี้หรือไม่?')) return;
-          o.lotLog=o.lotLog||[];
-          o.lotLog.push({ time:localISO(), fiberName:name, from:cur, to:t,
-            toRemaining:hit?r3(hit.remaining):null, toKg:hit?hit.kg:null, toDate:hit?hit.date:'',
-            orderId:o.id, manual:true });
-          f.lot=t;
-          await saveOrders(); rFeed(true);
-          toast(name+' เปลี่ยนเป็นก้อน #'+t+' แล้ว');
+        bl.querySelectorAll('[data-wdgo]').forEach(b=>b.onclick=()=>{
+          const name=b.dataset.wdgo;
+          const sel=$('wdSel');
+          if(sel){
+            const has=Array.from(sel.options).some(x=>x.value===name);
+            sel.value = has ? name : '__new__';
+            sel.dispatchEvent(new Event('change'));
+            if($('wdName')) $('wdName').value=name;
+            populateWdLotOptions(name);
+          }
+          const card=$('wdSeq'); if(card&&card.scrollIntoView) card.scrollIntoView({block:'center',behavior:'smooth'});
+          flash&&flash('cardWd');
+          toast('เลือกเบอร์ก้อนที่หยิบมา แล้วกดบันทึกการเบิก');
         });
       }
     }
@@ -1578,15 +1579,15 @@ window.WPDAUTH = {
       : '<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';
     tf.querySelectorAll('[data-fd]').forEach(b=>b.onclick=async()=>{
       const _id=b.dataset.fd;
-      const _back=S.wd.filter(w=>w.auto && w.feedId===_id);
-      const _sum={}; _back.forEach(w=>{ _sum[w.fiberName]=r3((_sum[w.fiberName]||0)+(+w.kg||0)); });
+      const _back=(S.use||[]).filter(u=>u.feedId===_id);
+      const _sum={}; _back.forEach(u=>{ _sum[u.fiberName]=r3((_sum[u.fiberName]||0)+(+u.kg||0)); });
       const _msg=_back.length
-        ? 'ลบรายการป้อนใยนี้? ระบบจะคืนใยที่หักไปให้ด้วย: '+Object.keys(_sum).map(k=>k+' '+_sum[k]+' กก.').join(' · ')
+        ? 'ลบรายการป้อนใยนี้? ระบบจะคืนใยเข้าก้อนที่ไลน์ให้ด้วย: '+Object.keys(_sum).map(k=>k+' '+_sum[k]+' กก.').join(' · ')
         : 'ลบรายการป้อนใยนี้?';
       if(!await ask('ลบรายการ',_msg)) return;
       S.feed=S.feed.filter(x=>x.id!==_id);
-      if(_back.length) S.wd=S.wd.filter(w=>!(w.auto && w.feedId===_id));
-      await saveFeed(); rFeed(); toast(_back.length?'ลบแล้ว — คืนใยเข้าสต๊อกเรียบร้อย':'ลบแล้ว');
+      if(_back.length) S.use=(S.use||[]).filter(u=>u.feedId!==_id);
+      await saveFeed(); rFeed(); toast(_back.length?'ลบแล้ว — คืนใยเข้าก้อนที่ไลน์เรียบร้อย':'ลบแล้ว');
     });
 
     /* WPD PATCH: โชว์รายการเบิกที่ออเดอร์ถูกลบไปแล้วด้วย ไม่งั้นจะลบทิ้งไม่ได้เลย แต่ยังหักสต๊อกค้างอยู่ */
@@ -1663,7 +1664,7 @@ window.WPDAUTH = {
     const cut=autoCutFiber(o, feedId);
     saveFeed().then(()=>{ if(current==='feed') rFeed(); });
     if(cut){
-      let msg='รอบที่ '+(n+1)+' — '+cut.msgs.join(' · ');
+      let msg='รอบที่ '+(n+1)+(cut.msgs.length?' — '+cut.msgs.join(' · '):'');
       if(cut.switched && cut.switched.length) msg+=' 🔄 '+cut.switched.join(' · ');
       if(cut.shorts.length) msg+=' ⚠ '+cut.shorts.join(' · ');
       toast(msg);
@@ -1682,13 +1683,13 @@ window.WPDAUTH = {
     const list=S.feed.filter(l=>l.orderId===o.id&&dayOf(l.time)===t);
     if(!list.length){ toast('ไม่มีรายการให้ลบ'); return; }
     const last=list[list.length-1];
-    const back=S.wd.filter(w=>w.auto && w.feedId===last.id);
-    const sum={}; back.forEach(w=>{ sum[w.fiberName]=r3((sum[w.fiberName]||0)+(+w.kg||0)); });
+    const back=(S.use||[]).filter(u=>u.feedId===last.id);
+    const sum={}; back.forEach(u=>{ sum[u.fiberName]=r3((sum[u.fiberName]||0)+(+u.kg||0)); });
     if(!await ask('ลบรายการล่าสุด','รอบที่ '+last.seq+' เวลา '+hhmm(last.time)+
-      (back.length?'\n\nระบบจะคืนใยที่หักไปให้ด้วย: '+Object.keys(sum).map(k=>k+' '+sum[k]+' กก.').join(' · '):''))) return;
+      (back.length?'\n\nระบบจะคืนใยเข้าก้อนที่ไลน์ให้ด้วย: '+Object.keys(sum).map(k=>k+' '+sum[k]+' กก.').join(' · '):''))) return;
     S.feed=S.feed.filter(x=>x.id!==last.id);
-    if(back.length) S.wd=S.wd.filter(w=>!(w.auto && w.feedId===last.id));
-    await saveFeed(); rFeed(); toast(back.length?'ลบแล้ว — คืนใยเข้าสต๊อกเรียบร้อย':'ลบแล้ว');
+    if(back.length) S.use=(S.use||[]).filter(u=>u.feedId!==last.id);
+    await saveFeed(); rFeed(); toast(back.length?'ลบแล้ว — คืนใยเข้าก้อนที่ไลน์เรียบร้อย':'ลบแล้ว');
   };
 
   function refreshGasUI(){
@@ -1796,7 +1797,17 @@ window.WPDAUTH = {
     txt.oninput=()=>{ formDirty=true; wdWarnText(getOrder(),txt.value,warnId); if(onFiberChange) onFiberChange(txt.value); };
   }
   bindFiberPicker('wdSel','wdName','wdWarn',()=>activeFeed(),(name)=>populateWdLotOptions(name));
-  $('wdLot').onchange=updateWdLotRemainHint;
+  $('wdLot').onchange=function(){
+    /* เลือกก้อนแล้วเติมเบอร์ก้อนกับน้ำหนักที่เหลือให้เลย จะได้ไม่ต้องพิมพ์ */
+    const lot=this.value;
+    if(lot){
+      const name=($('wdName')?$('wdName').value.trim():'');
+      const row=fiberLotsNow(name).find(l=>String(l.lot)===String(lot));
+      if($('wdSeq') && !$('wdSeq').value.trim()) $('wdSeq').value=String(lot);
+      if(row && $('wdKg') && !$('wdKg').value) $('wdKg').value=row.remaining;
+    }
+    updateWdLotRemainHint();
+  };
   $('wdKg').oninput=updateWdLotRemainHint;
   bindFiberPicker('ewSel','ewName','ewWarn',()=>{ const w=S.wd.find(x=>x.id===ewId); return w?orderById(w.orderId):null; });
 
@@ -1810,11 +1821,6 @@ window.WPDAUTH = {
     if(S.wd.some(w=>w.orderId===o.id&&String(w.seq)===bale&&w.fiberName===n)){
       if(!await ask('หมายเลขก้อนซ้ำ','ก้อน "'+bale+'" ของ '+n+' เคยบันทึกไปแล้วในออเดอร์นี้\n\nยืนยันจะบันทึกซ้ำหรือไม่?')) return;
     }
-    if(o.autoCutFiber!==false){
-      if(!await ask('ยอดจะถูกหักซ้ำ',
-        'ระบบหักใยให้อัตโนมัติทุกรอบป้อนอยู่แล้ว\nการเบิก '+kg+' กก. ตรงนี้จะหักออกจากสต๊อกเพิ่มอีก\n\n'+
-        'ใช้เฉพาะกรณีเบิกใยไปใช้นอกไลน์เท่านั้น — ยืนยันหรือไม่?')) return;
-    }
     if(!inRecipe(o,n)){
       if(!await ask('ใยไม่ตรงกับสูตร',
         '"'+n+'" ไม่อยู่ในสูตรของ '+o.customer+'\nสูตรคือ '+(o.fibers.length?o.fibers.map(f=>f.name).join(', '):'ยังไม่ได้ตั้ง')+
@@ -1827,6 +1833,7 @@ window.WPDAUTH = {
     await saveFeed();
     await rememberFiber(n);
     $('wdKg').value=''; $('wdNote').value=''; $('wdSeq').value=''; formDirty=false;
+    toast('เบิกแล้ว — ก้อน '+($('wdSeq').value||lot)+' เข้าคิวที่ไลน์เรียบร้อย');
     // ชื่อใย+ลอตที่เลือกไว้ค้างต่อเนื่องไปเรื่อยๆ จนกว่าจะเปลี่ยนเอง (มักเบิกล็อตเดิมซ้ำหลายรอบติดกัน)
     rFeed(); toast('บันทึกการเบิกใย');
   };
@@ -1888,9 +1895,9 @@ window.WPDAUTH = {
     const isNew = name && !known.includes(name);
     d.innerHTML='<select class="rsel" style="margin-top:0;">'+fiberOptions(isNew?'__new__':name)+'</select>'+
       '<input class="rn" placeholder="พิมพ์ชื่อใยใหม่" value="'+esc(name||'')+'" style="margin-top:0; display:'+(isNew?'block':'none')+';">'+
-      '<select class="rlotSel" style="max-width:210px; margin-top:0;"></select>'+
-      '<input class="rlot" placeholder="พิมพ์เบอร์เอง" style="max-width:120px; margin-top:0; display:none;">'+
-      '<input class="rk" type="number" inputmode="decimal" step="0.01" placeholder="กก./รอบ" style="max-width:96px; margin-top:0;" value="'+(kg==null?'':kg)+'">'+
+      '<select class="rlotSel" style="display:none;"></select>'+
+      '<input class="rlot" type="hidden" value="'+esc(lotNo||'')+'">'+
+      '<input class="rk" type="number" inputmode="decimal" step="0.01" placeholder="กก./รอบ" style="max-width:110px; margin-top:0;" value="'+(kg==null?'':kg)+'">'+
       '<input class="rtag" type="hidden" value="'+esc(tagNo||'')+'">'+
       '<button class="x">✕</button>'+
       '<div class="sumline rowLotHint" style="width:100%; margin-top:2px;"></div>';
@@ -1928,16 +1935,14 @@ window.WPDAUTH = {
       const total=r3(withRemain.reduce((s,l)=>s+Math.max(0,l.remaining),0));
       const active=withRemain.filter(l=>l.remaining>0).sort((a,b)=>a.lotNo-b.lotNo)[0];
       const balesLeft=STOCKFIBER_BALES[n];
-      const cur=rowLotNo(d);
-      const curRow=withRemain.find(l=>String(l.lotNo)===String(cur));
-      hint.innerHTML='คงเหลือในสต๊อกรวม <b style="color:'+(total<=0?'var(--red)':'var(--accent2)')+'">'+total+' กก.</b>'+
-        (balesLeft!=null?' (<b style="color:var(--accent2)">'+balesLeft+' ก้อน</b>)':'')+
-        (cur
-          ? '<br>ใช้ก้อน <b style="color:var(--accent2)">'+esc(baleLabel(n,curRow)||('เบอร์ '+cur))+'</b>'+
-            (curRow ? ' — เหลือ <b style="color:'+(curRow.remaining<=0?'var(--red)':'var(--accent2)')+'">'+curRow.remaining+' กก.</b>'
-                    : ' <span class="bdg warn">ไม่มีเบอร์นี้ในสต๊อก</span>')
-          : (active?' — ยังไม่ได้เลือกเบอร์ก้อน ระบบจะเริ่มจากเบอร์ '+esc(active.lotNo)+' ให้เอง':' <span class="bdg bad">ใยหมดสต๊อกแล้ว</span>'))+
-        '<br><span style="color:var(--dim)">ก้อนที่เลือกไว้หมดเมื่อไหร่ ระบบสลับไปก้อนถัดไปของใยชื่อเดียวกันให้เอง แล้วบันทึกไว้ในประวัติ</span>';
+      const at=baleAtLine(n), wait=baleWaiting(n);
+      hint.innerHTML='ในสต๊อกยังมี <b style="color:'+(total<=0?'var(--red)':'var(--accent2)')+'">'+total+' กก.</b>'+
+        '<br>'+(at
+          ? 'ที่ไลน์กำลังใช้ <b style="color:var(--accent2)">ก้อน '+esc(at.no)+'</b> — เหลือ <b style="color:var(--accent2)">'+at.remaining+' กก.</b>'+
+            (wait.length?' · เบิกรอไว้อีก '+wait.length+' ก้อน ('+wait.map(b=>'#'+b.no+' '+b.remaining+' กก.').join(', ')+')'
+                        :' <span class="bdg warn">ไม่มีก้อนสำรองรอไว้</span>')
+          : '<span class="bdg bad">ยังไม่มีก้อนที่ไลน์ — กดเบิกใยก่อน</span>')+
+        '<br><span style="color:var(--dim)">เบิกก้อนไหนก็ได้ขอให้ชื่อใยตรงกัน ก้อนที่ใช้อยู่หมดเมื่อไหร่ ก้อนที่เบิกรอไว้จะมาแทนที่เอง</span>';
     };
     sel.onchange=()=>{
       formDirty=true;
@@ -2051,7 +2056,7 @@ window.WPDAUTH = {
     const o=active(), t=todayStr();
     if((o?o.id:null)!==lastLineOrder){ lastLineOrder=o?o.id:null; specOpen=null; }
     if($('fwFabSel')) refreshFwSelects();
-    if($('bwKindSel')) refreshBwSelects();
+    if($('bwKindSel')){ refreshBwSelects(); refreshBwSackOptions(); }
     if($('gasAvailInfo')) refreshGasUI();
     $('lineInfo').innerHTML=o
       ? '<div class="sumline">ออเดอร์: <b style="color:var(--accent2)" class="kn">'+esc(o.customer)+' — '+esc(o.code)+
@@ -2282,9 +2287,45 @@ window.WPDAUTH = {
       sel.innerHTML='<option value="">— ไม่ระบุ —</option>'+
         sacks.slice().sort((a,b)=>a.sackNo-b.sackNo).map(s=>'<option value="'+s.sackNo+'"'+(String(s.sackNo)===String(keepVal)?' selected':'')+'>เบอร์กระสอบ #'+s.sackNo+' — เหลือ '+s.remainingKg+' กก. ('+s.remainingPieces+' ใบ)</option>').join('');
     }
+    /* เลือกถุงแล้วดึงไซซ์/น้ำหนักต่อใบจากสต๊อกมาเติมให้เลย ไม่ต้องพิมพ์ใหม่ */
+    const autoFilled={};
+    function putAuto(id,val,force){
+      const el=$(id); if(!el || val==null || val==='') return;
+      /* ไม่ทับเลขที่คนพิมพ์เอง — เติมเฉพาะตอนช่องว่าง หรือค่าที่ยังเป็นของที่ระบบเติมไว้ */
+      const cur=String(el.value||'').trim();
+      if(!force && cur!=='' && cur!==String(autoFilled[id]==null?'':autoFilled[id])) return;
+      el.value=val; autoFilled[id]=val;
+    }
+    function fillFromStock(kind, nameId, sizeId, weightId, sackId, force){
+      const name=$(nameId)?$(nameId).value.trim():'';
+      if(!name) return;
+      const rows=sackStatusNow().filter(x=>x.kind===kind && x.name===name);
+      if(!rows.length) return;
+      const chosen=(sackId&&$(sackId)&&$(sackId).value)
+        ? rows.find(x=>String(x.sackNo)===String($(sackId).value))
+        : null;
+      /* ถ้ายังไม่เลือกกระสอบ ใช้กระสอบที่ยังมีของและใหม่สุดเป็นตัวตั้ง */
+      const ref = chosen || rows.filter(x=>x.remainingKg>0).sort((a,b)=>String(b.time).localeCompare(String(a.time)))[0] || rows[rows.length-1];
+      if(!ref) return;
+      if(sizeId) putAuto(sizeId, ref.size, force);
+      if(weightId && ref.weightPerBag>0) putAuto(weightId, ref.weightPerBag, force);
+      if(typeof prev==='function') prev();
+    }
     function refreshBagLotOptions(){ refreshBagLotOptionsFor('zip','spBag','spBagSack',sp.bagSackNo); }
     function refreshBag2LotOptions(){ if($('spBag2Sack')) refreshBagLotOptionsFor('zip','spBag2','spBag2Sack',sp.bagSackNo2); }
     function refreshPackBagLotOptions(){ refreshBagLotOptionsFor('pack','spPackBag','spPackBagLot',sp.packBagLotRef); }
+    function wireAutoFill(){
+      if($('spBagSel')) $('spBagSel').addEventListener('change',()=>setTimeout(()=>{
+        refreshBagLotOptions(); fillFromStock('zip','spBag','spBagSize','spBagW','spBagSack'); },0));
+      if($('spBag')) $('spBag').addEventListener('input',()=>setTimeout(()=>{
+        refreshBagLotOptions(); fillFromStock('zip','spBag','spBagSize','spBagW','spBagSack'); },0));
+      if($('spBagSack')) $('spBagSack').addEventListener('change',()=>
+        fillFromStock('zip','spBag','spBagSize','spBagW','spBagSack',true));
+      if($('spPackBag')) $('spPackBag').addEventListener('input',()=>setTimeout(()=>{
+        refreshPackBagLotOptions(); fillFromStock('pack','spPackBag',null,'spPackW','spPackBagLot'); },0));
+      if($('spPackBagLot')) $('spPackBagLot').addEventListener('change',()=>
+        fillFromStock('pack','spPackBag',null,'spPackW','spPackBagLot',true));
+    }
     function wireBagNameSel(prefix){
       const sel=$(prefix+'Sel'), txt=$(prefix); if(!sel||!txt) return;
       sel.onchange=()=>{
@@ -2319,6 +2360,7 @@ window.WPDAUTH = {
         : '<div class="l">กรอกน้ำหนักต่อชิ้นและจำนวนชิ้นต่อแพ็ค แล้วระบบจะคำนวณให้</div>';
     };
     ['spW','spN','spBagW','spZipN','spPackW','spPackN'].forEach(id=>{ if($(id)) $(id).oninput=()=>{ formDirty=true; prev(); }; });
+    wireAutoFill();
     if($('spPackBag')) $('spPackBag').addEventListener('input',refreshPackBagLotOptions);
     ['spBag','spBag2','spTol','spPackBag','spFabType','spFabSize','spBagSize','spBag2Size'].forEach(id=>{ if($(id)) $(id).oninput=()=>{ formDirty=true; }; });
     /* เก็บสิ่งที่พิมพ์ค้างไว้ก่อนวาดฟอร์มใหม่ จะได้ไม่หาย */
@@ -2472,11 +2514,37 @@ window.WPDAUTH = {
     const st=CALC.tolStatus(act,std,o.spec.tolPct);
     let _tail='';
     if(_cut && _cut.msgs && _cut.msgs.length) _tail=' — '+_cut.msgs.join(' · ');
+    if(_cut && _cut.switched && _cut.switched.length) _tail+=' 🔄 '+_cut.switched.join(' · ');
     if(_cut && _cut.shorts && _cut.shorts.length) _tail+=' ⚠ '+_cut.shorts.join(' · ');
     toast('แพ็คที่ '+seq+' · '+(act==null?std+' กก. (ตาม Std)':act+' กก.'+
       (st==='ok'?' ✓ ตรงสเปค':st==='over'?' ▲ เกิน '+r3(act-std):' ▼ ขาด '+r3(std-act)))+_tail);
   }
 
+  /* ---------- คิวก้อนใยที่เบิกมาไว้ที่ไลน์แล้ว ----------
+     เบิก 1 ครั้ง = ยกก้อนมาที่ไลน์ 1 ก้อน (หักสต๊อกตอนเบิก)
+     แตะ +1 รอบ = กินใยจากก้อนที่อยู่ที่ไลน์ ไม่หักสต๊อกซ้ำ
+     ก้อนที่ไลน์หมด → ก้อนถัดไปที่เบิกไว้ (ชื่อใยเดียวกัน) มาแทนที่เอง */
+  function baleUsed(wdId){
+    return r3((S.use||[]).filter(u=>u.wdId===wdId).reduce((a,b)=>a+(+b.kg||0),0));
+  }
+  function baleQueue(fiberName){
+    return (S.wd||[])
+      .filter(w=>w.fiberName===fiberName && !w.auto)
+      .slice().sort((a,b)=>String(a.time).localeCompare(String(b.time)))
+      .map(w=>{ const used=baleUsed(w.id);
+        return { wdId:w.id, no:(w.seq||w.lot||''), lot:w.lot, kg:r3(+w.kg||0),
+                 used:used, remaining:r3((+w.kg||0)-used), time:w.time }; });
+  }
+  function baleAtLine(fiberName){
+    return baleQueue(fiberName).find(b=>b.remaining>0.0000001)||null;
+  }
+  function baleWaiting(fiberName){
+    const q=baleQueue(fiberName).filter(b=>b.remaining>0.0000001);
+    return q.slice(1);
+  }
+  function lineTotal(fiberName){
+    return r3(baleQueue(fiberName).reduce((a,b)=>a+Math.max(0,b.remaining),0));
+  }
   /* ---------- ก้อนใย: แท็กก้อนที่ใช้อยู่ + หักสต๊อกอัตโนมัติทุกรอบป้อน ---------- */
   /* วันที่แบบที่เขียนบนก้อน เช่น 21/8/2569 */
   function thDate(iso){
@@ -2519,41 +2587,36 @@ window.WPDAUTH = {
     if(o.autoCutFiber===false) return null;
     const rec=(o.fibers||[]).filter(f=>f.name && (+f.kg||0)>0);
     if(!rec.length) return null;
-    const msgs=[], shorts=[], switched=[];
+    const msgs=[], shorts=[], switched=[], needWd=[];
     o.lotLog=o.lotLog||[];
+    S.use=S.use||[];
     rec.forEach(f=>{
       let remain=+f.kg||0;
-      /* ไล่ลำดับ: ก้อนที่เลือกไว้ในสูตรก่อน แล้วค่อยก้อนอื่นของใยชื่อเดียวกันตามเบอร์ */
-      const order=()=>{
-        const live=fiberLotsNow(f.name).filter(l=>l.remaining>0);
-        const pinned=live.filter(l=>String(l.lot)===String(f.lot||''));
-        const rest=live.filter(l=>String(l.lot)!==String(f.lot||'')).sort((a,b)=>a.lot-b.lot);
-        return pinned.concat(rest);
-      };
-      for(const l of order()){
+      const before=(f.lot!=null&&f.lot!=='')?String(f.lot):'';
+      const q=baleQueue(f.name).filter(b=>b.remaining>0.0000001);
+      if(!q.length){ needWd.push(f.name); shorts.push(f.name+' ไม่มีก้อนที่ไลน์ — ต้องกดเบิกก่อน'); return; }
+      for(const b of q){
         if(remain<=0.0000001) break;
-        const take=Math.min(l.remaining, remain);
+        const take=Math.min(b.remaining, remain);
         if(take<=0) continue;
-        /* เปลี่ยนก้อน: บันทึกไว้ในประวัติแล้วย้ายสูตรไปก้อนใหม่ */
-        if(String(l.lot)!==String(f.lot||'')){
+        /* ก้อนเดิมหมด ก้อนที่เบิกไว้มาแทนที่ — บันทึกไว้ในประวัติ */
+        if(String(b.no)!==before && String(b.no)!==String(f.lot||'')){
           const from=f.lot||'';
-          f.lot=String(l.lot);
-          const line={ time:localISO(), fiberName:f.name, from:from, to:String(l.lot),
-            toRemaining:r3(l.remaining), toKg:l.kg, toDate:l.date, orderId:o.id };
-          o.lotLog.push(line);
-          switched.push(f.name+': '+(from?'ก้อน '+from+' หมด → ':'เริ่ม ')+'ก้อน '+l.lot+' ('+l.kg+' กก.)');
+          f.lot=String(b.no);
+          o.lotLog.push({ time:localISO(), fiberName:f.name, from:from, to:String(b.no),
+            toRemaining:r3(b.remaining), toKg:b.kg, toDate:thDate(b.time), orderId:o.id });
+          switched.push(f.name+': '+(from?'ก้อน '+from+' หมด → ':'เริ่ม ')+'ก้อน '+b.no+' ('+b.kg+' กก.)');
         }
-        S.wd.push({ id:uid(), time:localISO(), orderId:o.id, seq:String(l.lot),
-          fiberName:f.name, lot:l.lot, kg:r3(take), note:'หักอัตโนมัติ (ป้อนใย 1 รอบ)',
-          auto:true, feedId:feedId||null, offRecipe:false });
+        S.use.push({ id:uid(), time:localISO(), orderId:o.id, feedId:feedId||null,
+          fiberName:f.name, wdId:b.wdId, baleNo:String(b.no), lot:b.lot, kg:r3(take) });
         remain=r3(remain-take);
       }
-      const left=fiberRemainTotal(f.name);
-      msgs.push(f.name+' เหลือ '+left+' กก.');
-      if(remain>0.0000001) shorts.push(f.name+' ขาด '+r3(remain)+' กก.');
+      const atLine=baleAtLine(f.name);
+      msgs.push(f.name+' '+(atLine?'ก้อน '+atLine.no+' เหลือ '+atLine.remaining+' กก.':'ที่ไลน์หมดแล้ว'));
+      if(remain>0.0000001) shorts.push(f.name+' ที่ไลน์ขาด '+r3(remain)+' กก. — เบิกก้อนใหม่ก่อน');
     });
-    if(switched.length || rec.length) saveOrders();
-    return { msgs, shorts, switched };
+    if(rec.length) saveOrders();
+    return { msgs, shorts, switched, needWd };
   }
   /* กันพิมพ์ผิด — ตัวเลขที่ผิดจุดทศนิยมทำให้สต๊อกหายเป็นร้อยกิโลโดยไม่มีใครรู้ */
   function stockBagWeight(kind,name){
@@ -2583,37 +2646,80 @@ window.WPDAUTH = {
       out.push('น้ำหนักถุงรวม '+bagKg+' กก. มากกว่าครึ่งหนึ่งของน้ำหนักหมอน ('+pillowKg+' กก.) — ปกติถุงควรเบากว่านี้มาก');
     return out;
   }
+  /* ---------- คิวกระสอบถุงที่เบิกมาไว้ที่ไลน์ (โครงเดียวกับก้อนใย) ---------- */
+  function sackUsed(bwId){
+    return r3((S.bagUse||[]).filter(u=>u.bwId===bwId).reduce((a,b)=>a+(+b.kg||0),0));
+  }
+  function sackQueue(kind,name){
+    const st=sackStatusNow();
+    return (S.bagWd||[])
+      .filter(w=>!w.auto && w.kind===kind && w.name===name)
+      .slice().sort((a,b)=>String(a.time).localeCompare(String(b.time)))
+      .map(w=>{
+        const used=sackUsed(w.id);
+        const first=(w.picks&&w.picks[0])||{};
+        const info=st.find(x=>x.sackId===first.sackId)||{};
+        return { bwId:w.id, sackNo:(first.sackNo!=null?first.sackNo:''), sackId:first.sackId,
+                 kg:r3(+w.kg||0), used:used, remaining:r3((+w.kg||0)-used),
+                 weightPerBag:+info.weightPerBag||0, size:info.size||'', time:w.time };
+      });
+  }
+  function sackAtLine(kind,name){ return sackQueue(kind,name).find(x=>x.remaining>0.0000001)||null; }
+  function sackWaiting(kind,name){ return sackQueue(kind,name).filter(x=>x.remaining>0.0000001).slice(1); }
+  function piecesOf(kg,w){ return (w>0)?Math.round(kg/w):0; }
   /* หักถุงออกจากกระสอบที่แท็กไว้ ทุกครั้งที่บันทึก 1 แพ็ค */
   function autoCutBags(o,lineId){
     const sp=o.spec||{};
     if(sp.autoCutBag===false) return null;
     const jobs=[];
-    const zKg=CALC.zipKgPerPack(sp);
-    if(sp.bagName && zKg>0) jobs.push({kind:'zip', name:sp.bagName, kg:zKg, pinned:sp.bagSackNo});
-    const pKg=CALC.packKgPerPack(sp);
-    if(sp.packBagName && pKg>0) jobs.push({kind:'pack', name:sp.packBagName, kg:pKg, pinned:sp.packBagLotRef});
+    if(sp.bagName && CALC.zipPerPack(sp)>0)
+      jobs.push({kind:'zip', label:'ถุงซิล', name:sp.bagName, n:CALC.zipPerPack(sp), wKey:'bagWeight', sackKey:'bagSackNo'});
+    if(sp.packBagName && CALC.packBagPerPack(sp)>0)
+      jobs.push({kind:'pack', label:'ถุงแพ็ค', name:sp.packBagName, n:CALC.packBagPerPack(sp), wKey:'packBagWeight', sackKey:'packBagLotRef'});
     if(!jobs.length) return null;
-    const msgs=[], shorts=[];
+    S.bagUse=S.bagUse||[];
+    o.bagLog=o.bagLog||[];
+    const msgs=[], shorts=[], switched=[], needWd=[];
     jobs.forEach(j=>{
-      let remain=j.kg; const picks=[];
-      const list=sackStatusNow().filter(x=>x.kind===j.kind && x.name===j.name && x.remainingKg>0);
-      const ordered=[];
-      if(j.pinned){ const hit=list.find(x=>String(x.sackNo)===String(j.pinned)); if(hit) ordered.push(hit); }
-      list.slice().sort((a,b)=>a.sackNo-b.sackNo).forEach(x=>{ if(!ordered.some(y=>y.sackId===x.sackId)) ordered.push(x); });
-      for(const sk of ordered){
-        if(remain<=0.0000001) break;
-        const take=Math.min(sk.remainingKg, remain);
-        if(take>0){ picks.push({sackId:sk.sackId, sackNo:sk.sackNo, kg:r3(take)}); remain=r3(remain-take); }
+      const q=sackQueue(j.kind,j.name).filter(x=>x.remaining>0.0000001);
+      if(!q.length){ needWd.push(j.label+' '+j.name); shorts.push(j.label+' ไม่มีกระสอบที่ไลน์ — ต้องกดเบิกก่อน'); return; }
+      let pieces=j.n;                         /* ใช้กี่ใบต่อแพ็ค */
+      for(const sk of q){
+        if(pieces<=0) break;
+        /* กระสอบเก่าหมด → กระสอบที่เบิกไว้มาแทนที่ + ปรับน้ำหนักต่อใบตามกระสอบใหม่ทันที */
+        if(String(sk.sackNo)!==String(sp[j.sackKey]||'')){
+          const from=sp[j.sackKey]||'';
+          const oldW=+sp[j.wKey]||0, newW=sk.weightPerBag||oldW;
+          sp[j.sackKey]=String(sk.sackNo);
+          let note='';
+          if(newW>0 && Math.abs(newW-oldW)>0.0000001){
+            sp[j.wKey]=newW;
+            if(sk.size && j.kind==='zip') sp.bagSize=sk.size;
+            note=' · น้ำหนัก/ใบเปลี่ยน '+oldW+' → '+newW+' กก.';
+          }
+          o.bagLog.push({ time:localISO(), kind:j.kind, name:j.name, from:from, to:String(sk.sackNo),
+            fromW:oldW, toW:newW, toRemaining:sk.remaining, orderId:o.id });
+          switched.push(j.label+': '+(from?'กระสอบ '+from+' หมด → ':'เริ่ม ')+'กระสอบ '+sk.sackNo+note);
+        }
+        const w=+sp[j.wKey]||0;
+        if(w<=0){ shorts.push(j.label+' ยังไม่ได้ตั้งน้ำหนักต่อใบ'); break; }
+        const canPieces=Math.floor((sk.remaining+0.0000001)/w);
+        const take=Math.min(canPieces, pieces);
+        if(take>0){
+          S.bagUse.push({ id:uid(), time:localISO(), orderId:o.id, lineId:lineId||null,
+            kind:j.kind, name:j.name, bwId:sk.bwId, sackNo:String(sk.sackNo),
+            pieces:take, kg:r3(take*w) });
+          pieces-=take;
+        }
       }
-      if(picks.length){
-        S.bagWd.push({ id:uid(), time:localISO(), orderId:o.id, kind:j.kind, name:j.name,
-          kg:r3(picks.reduce((a,b)=>a+b.kg,0)), picks, auto:true, lineId:lineId||null });
-        const last=sackStatusNow().find(x=>x.sackId===picks[picks.length-1].sackId);
-        if(last) msgs.push((j.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+' #'+last.sackNo+' เหลือ '+last.remainingPieces+' ใบ');
-      }
-      if(remain>0.0000001) shorts.push((j.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+' '+j.name+' ขาด '+r3(remain)+' กก.');
+      const at=sackAtLine(j.kind,j.name);
+      const w=+sp[j.wKey]||0;
+      if(at) msgs.push(j.label+' #'+at.sackNo+' เหลือ '+piecesOf(at.remaining,w)+' ใบ');
+      else msgs.push(j.label+' ที่ไลน์หมดแล้ว');
+      if(pieces>0) shorts.push(j.label+' ที่ไลน์ขาดอีก '+pieces+' ใบ — เบิกกระสอบใหม่ก่อน');
     });
-    return { msgs, shorts };
+    if(switched.length) saveOrders();
+    return { msgs, shorts, switched, needWd };
   }
 
   function startPack(actual,actualPc){
@@ -2704,6 +2810,7 @@ window.WPDAUTH = {
     if(sizesForFab.includes(keepSize)) sizeSel.value=keepSize;
     /* เลือกชนิดผ้าแล้วมีไซซ์เดียว เลือกให้เลย ไม่ต้องกดซ้ำ */
     if(fabSel.value && !sizeSel.value && sizesForFab.length===1) sizeSel.value=sizesForFab[0];
+    renderFwList();
     updateFwPreview();
     const hist=S.fabricWd.slice().reverse().slice(0,30);
     $('tFabWdHist').innerHTML=hist.length?'<tr><th>เวลา</th><th>ชนิดผ้า</th><th>ไซซ์</th><th>จำนวน</th><th>หยิบจากถุง</th><th></th></tr>'+
@@ -2753,30 +2860,91 @@ window.WPDAUTH = {
     return '<span class="bdg warn">'+esc(fab)+' '+esc(size)+' รับกลับมาแล้ว '+ret+' ชิ้น เบิกไปหมดแล้ว '+wd+' ชิ้น — ไม่เหลือให้เบิก</span>';
   }
   let fwPick=null;
+  /* รายการถุงให้ติ๊ก — โชว์วันที่ตัดกับจำนวน เพราะเลขถุงซ้ำกันได้ */
+  function fwRows(){
+    const fab=$('fwFabSel').value, size=$('fwSizeSel').value;
+    if(!fab||!size) return [];
+    return fabBatchesNow().filter(b=>b.fabricType===fab && b.size===size && b.readyBalance>0)
+      .sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+  }
+  function renderFwList(){
+    const box=$('fwList'); if(!box) return;
+    const rows=fwRows();
+    if(!rows.length){ box.innerHTML='<div class="empty" style="padding:8px;">'+
+      ($('fwFabSel').value&&$('fwSizeSel').value?'ไม่มีถุงที่พร้อมเบิกของผ้า/ไซซ์นี้':'เลือกชนิดผ้าและไซซ์ก่อน')+'</div>'; return; }
+    const prev={}; box.querySelectorAll('[data-fwb]').forEach(c=>{ prev[c.dataset.fwb]=c.checked; });
+    const prevQty={}; box.querySelectorAll('[data-fwq]').forEach(i=>{ prevQty[i.dataset.fwq]=i.value; });
+    box.innerHTML='<table><tr><th style="width:34px;"></th><th>ถุง</th><th>ตัดวันที่</th><th>พร้อมเบิก</th><th>เอาไปกี่ชิ้น</th></tr>'+
+      rows.map(b=>'<tr><td><input type="checkbox" data-fwb="'+esc(b.batchId)+'" style="width:22px;height:22px;margin:0;"'+
+        (prev[b.batchId]?' checked':'')+'></td>'+
+        '<td class="kn">#'+b.batchNo+(b.cutSize&&b.cutSize!==b.size?' <span style="color:var(--dim);font-size:11px;">ตัด '+esc(b.cutSize)+'</span>':'')+'</td>'+
+        '<td>'+thDate(b.time)+'</td>'+
+        '<td><b style="color:var(--accent2)">'+b.readyBalance+'</b> ชิ้น</td>'+
+        '<td><input type="number" inputmode="numeric" data-fwq="'+esc(b.batchId)+'" value="'+
+          (prevQty[b.batchId]!=null?esc(prevQty[b.batchId]):b.readyBalance)+'" style="max-width:96px;margin:0;"></td></tr>').join('')+
+      '</table>';
+    box.querySelectorAll('[data-fwb]').forEach(c=>c.onchange=updateFwPreview);
+    box.querySelectorAll('[data-fwq]').forEach(i=>i.oninput=updateFwPreview);
+  }
+  function fwTicked(){
+    const box=$('fwList'); if(!box) return [];
+    const rows=fwRows(); const out=[];
+    box.querySelectorAll('[data-fwb]').forEach(c=>{
+      if(!c.checked) return;
+      const b=rows.find(x=>x.batchId===c.dataset.fwb); if(!b) return;
+      const inp=box.querySelector('[data-fwq="'+CSS.escape(c.dataset.fwb)+'"]');
+      let q=inp?(+inp.value||0):b.readyBalance;
+      if(q>b.readyBalance) q=b.readyBalance;
+      if(q>0) out.push({batchId:b.batchId, batchNo:b.batchNo, take:q, max:b.readyBalance});
+    });
+    return out;
+  }
   function updateFwPreview(){
-    const fab=$('fwFabSel').value, size=$('fwSizeSel').value, qty=+$('fwQty').value||0;
+    const fab=$('fwFabSel').value, size=$('fwSizeSel').value;
     const box=$('fwPreview'); if(!box) return;
     if(!fab||!size){ box.innerHTML=fabInfoLine(); fwPick=null; return; }
-    if(!qty){ box.innerHTML=fabReadyLine(fab,size); fwPick=null; return; }
-    const r=CALC.pickBatchesForWithdrawal(fabBatchesNow(), fab, size, qty);
-    fwPick=r;
-    if(!r.picks.length){ box.innerHTML=fabWhyEmpty(fab,size); return; }
-    box.innerHTML='จะหยิบจาก: '+r.picks.map(p=>'ถุง #'+p.batchNo+' ('+p.take+' ชิ้น)').join(', ')+
-      '<br>รวม <b>'+r.total+' ชิ้น</b>'+(r.short>0?' <span class="bdg warn">ขาดอีก '+r.short+' ชิ้น</span>':' <span class="bdg ok">ครบตามต้องการ</span>');
+    const rows=fwRows();
+    if(!rows.length){ box.innerHTML=fabWhyEmpty(fab,size); fwPick=null; return; }
+    const picks=fwTicked();
+    const total=picks.reduce((a,b)=>a+b.take,0);
+    const want=+$('fwQty').value||0;
+    fwPick={ picks, total, short: want>total?want-total:0 };
+    if(!picks.length){ box.innerHTML=fabReadyLine(fab,size)+'<br><span class="bdg warn">ยังไม่ได้ติ๊กถุงไหนเลย</span>'; return; }
+    box.innerHTML='ติ๊กไว้ '+picks.length+' ถุง: '+picks.map(p=>'#'+p.batchNo+' ('+p.take+')').join(', ')+
+      '<br>รวม <b style="color:var(--accent2)">'+total+' ชิ้น</b>'+
+      (want? (total>=want?' <span class="bdg ok">พอตามที่ต้องการ</span>':' <span class="bdg warn">ยังขาดอีก '+(want-total)+' ชิ้น</span>') : '');
   }
   if($('fwFabSel')){
-    $('fwFabSel').onchange=refreshFwSelects;
-    $('fwSizeSel').onchange=updateFwPreview;
+    $('fwFabSel').onchange=()=>{ refreshFwSelects(); renderFwList(); updateFwPreview(); };
+    $('fwSizeSel').onchange=()=>{ renderFwList(); updateFwPreview(); };
     $('fwQty').oninput=updateFwPreview;
+    if($('btnFwAuto')) $('btnFwAuto').onclick=()=>{
+      const want=+$('fwQty').value||0;
+      if(!want){ toast('พิมพ์จำนวนที่อยากได้ก่อน'); return; }
+      const rows=fwRows(); let left=want;
+      const box=$('fwList');
+      box.querySelectorAll('[data-fwb]').forEach(c=>{ c.checked=false; });
+      rows.forEach(b=>{
+        const c=box.querySelector('[data-fwb="'+CSS.escape(b.batchId)+'"]');
+        const q=box.querySelector('[data-fwq="'+CSS.escape(b.batchId)+'"]');
+        if(!c||!q) return;
+        if(left<=0){ q.value=b.readyBalance; return; }
+        const take=Math.min(b.readyBalance,left);
+        c.checked=true; q.value=take; left-=take;
+      });
+      updateFwPreview();
+      toast(left>0?('ติ๊กให้แล้ว แต่ยังขาดอีก '+left+' ชิ้น'):'ติ๊กถุงเก่าสุดให้พอแล้ว');
+    };
     $('btnFabWd').onclick=async()=>{
-      if(!fwPick || !fwPick.picks.length){ toast('ยังไม่มีถุงให้เบิก — เลือกชนิดผ้า/ไซซ์/จำนวนก่อน'); return; }
-      if(fwPick.short>0 && !await ask('ผ้าไม่พอ','ขาดอยู่ '+fwPick.short+' ชิ้น\n\nยืนยันจะเบิกเท่าที่มี ('+fwPick.total+' ชิ้น) หรือไม่?')) return;
+      if(!fwPick || !fwPick.picks.length){ toast('ติ๊กถุงที่หยิบมาก่อน'); return; }
+      if(fwPick.short>0 && !await ask('ยังไม่ครบตามที่พิมพ์ไว้','ติ๊กไว้ '+fwPick.total+' ชิ้น ขาดอีก '+fwPick.short+' ชิ้น\n\nยืนยันจะเบิกเท่าที่ติ๊กไว้หรือไม่?')) return;
       const total=fwPick.total;
       S.fabricWd.push({ id:uid(), time:localISO(), orderId:(active()?active().id:null), fabricType:$('fwFabSel').value, size:$('fwSizeSel').value,
         qty:total, picks:fwPick.picks.map(p=>({batchId:p.batchId,batchNo:p.batchNo,qty:p.take})) });
       await saveFeed();
       $('fwQty').value=''; $('fwPreview').innerHTML=''; fwPick=null;
-      refreshFwSelects(); toast('เบิกถุงบรรจุผ้าแล้ว '+total+' ชิ้น');
+      refreshFwSelects(); renderFwList(); updateFwPreview();
+      toast('เบิกถุงบรรจุผ้าแล้ว '+total+' ชิ้น');
     };
   }
 
@@ -2799,29 +2967,51 @@ window.WPDAUTH = {
     });
   }
   let bwPick=null;
+  function refreshBwSackOptions(){
+    const sel=$('bwSackSel'); if(!sel) return;
+    const kind=$('bwKindSel').value, name=$('bwNameSel').value;
+    const keep=sel.value;
+    if(!name){ sel.innerHTML='<option value="">— เลือกชื่อถุงก่อน —</option>'; return; }
+    const live=sackStatusNow().filter(x=>x.kind===kind && x.name===name && x.remainingKg>0)
+      .sort((a,b)=>a.sackNo-b.sackNo);
+    if(!live.length){ sel.innerHTML='<option value="">— ไม่มีกระสอบที่เหลือของในสต๊อก —</option>'; return; }
+    sel.innerHTML='<option value="">— เลือกกระสอบที่หยิบมา —</option>'+live.map(x=>
+      '<option value="'+esc(x.sackId)+'">กระสอบ #'+x.sackNo+' · '+x.weightPerBag+' กก./ใบ'+
+      (x.size?' · '+esc(x.size):'')+' · เหลือ '+x.remainingKg+' กก. ('+x.remainingPieces+' ใบ)</option>').join('');
+    if(live.some(x=>x.sackId===keep)) sel.value=keep;
+    else if(live.length===1) sel.value=live[0].sackId;
+  }
   function updateBwPreview(){
-    const kind=$('bwKindSel').value, name=$('bwNameSel').value, kg=+$('bwQty').value||0;
     const box=$('bwPreview'); if(!box) return;
-    if(!kind||!name||!kg){ box.innerHTML=''; bwPick=null; return; }
-    const r=CALC.pickSacksForWithdrawal(STOCKBAG.sacks, kind, name, kg);
-    bwPick=r;
-    if(!r.picks.length){ box.innerHTML='<span class="bdg bad">ไม่มีกระสอบที่พร้อมของ '+esc(name)+' เลย — เช็คในแอพสต๊อก</span>'; return; }
-    box.innerHTML='จะหยิบจาก: '+r.picks.map(p=>'เบอร์กระสอบ #'+p.sackNo+' ('+p.take+' กก.)').join(', ')+
-      '<br>รวม <b>'+r.total+' กก.</b>'+(r.short>0?' <span class="bdg warn">ขาดอีก '+r.short+' กก.</span>':' <span class="bdg ok">ครบตามต้องการ</span>');
+    const sackId=$('bwSackSel')?$('bwSackSel').value:'';
+    const kg=+$('bwQty').value||0;
+    if(!sackId){ box.innerHTML=''; bwPick=null; return; }
+    const sk=sackStatusNow().find(x=>x.sackId===sackId);
+    if(!sk){ box.innerHTML=''; bwPick=null; return; }
+    const take=Math.min(kg>0?kg:sk.remainingKg, sk.remainingKg);
+    bwPick={ picks:[{sackId:sk.sackId, sackNo:sk.sackNo, take:r3(take)}], total:r3(take), short:0, sack:sk };
+    box.innerHTML='ยกกระสอบ <b style="color:var(--accent2)">#'+sk.sackNo+'</b> มาที่ไลน์ — '+r3(take)+' กก. ≈ '+
+      piecesOf(take,sk.weightPerBag)+' ใบ · <b>'+sk.weightPerBag+' กก./ใบ</b>'+(sk.size?' · '+esc(sk.size):'')+
+      '<br><span style="color:var(--dim)">กระสอบที่ใช้อยู่หมดเมื่อไหร่ กระสอบนี้จะมาแทนที่ และปรับน้ำหนักต่อใบใน Standard ให้เอง</span>';
   }
   if($('bwKindSel')){
-    $('bwKindSel').onchange=refreshBwSelects;
-    $('bwNameSel').onchange=updateBwPreview;
+    $('bwKindSel').onchange=()=>{ refreshBwSelects(); refreshBwSackOptions(); updateBwPreview(); };
+    $('bwNameSel').onchange=()=>{ refreshBwSackOptions(); updateBwPreview(); };
+    $('bwSackSel').onchange=function(){
+      const sk=sackStatusNow().find(x=>x.sackId===this.value);
+      if(sk && $('bwQty') && !$('bwQty').value) $('bwQty').value=sk.remainingKg;
+      updateBwPreview();
+    };
     $('bwQty').oninput=updateBwPreview;
     $('btnBagWd').onclick=async()=>{
-      if(!bwPick || !bwPick.picks.length){ toast('ยังไม่มีกระสอบให้เบิก — เลือกประเภท/ชื่อถุง/น้ำหนักก่อน'); return; }
-      if(bwPick.short>0 && !await ask('ถุงไม่พอ','ขาดอยู่ '+bwPick.short+' กก.\n\nยืนยันจะเบิกเท่าที่มี ('+bwPick.total+' กก.) หรือไม่?')) return;
-      const total=bwPick.total;
+      if(!bwPick || !bwPick.picks.length){ toast('เลือกกระสอบที่หยิบมาก่อน'); return; }
+      const total=bwPick.total, sk=bwPick.sack;
       S.bagWd.push({ id:uid(), time:localISO(), orderId:(active()?active().id:null), kind:$('bwKindSel').value, name:$('bwNameSel').value,
         kg:total, picks:bwPick.picks.map(p=>({sackId:p.sackId,sackNo:p.sackNo,kg:p.take})) });
       await saveFeed();
       $('bwQty').value=''; $('bwPreview').innerHTML=''; bwPick=null;
-      refreshBwSelects(); toast('เบิกกระสอบถุงแล้ว '+total+' กก.');
+      refreshBwSelects(); refreshBwSackOptions();
+      toast('ยกกระสอบ #'+sk.sackNo+' มาที่ไลน์แล้ว — '+total+' กก. ('+sk.weightPerBag+' กก./ใบ)');
     };
   }
 
