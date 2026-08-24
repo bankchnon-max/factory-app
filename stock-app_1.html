@@ -140,9 +140,14 @@
             <input id="rwName" list="dlRwFiber" placeholder="พิมพ์ชื่อใย" style="display:none;"><datalist id="dlRwFiber"></datalist></div>
           <div><label>น้ำหนักก้อนนี้ (กก.)</label><input id="rwKg" type="number" inputmode="decimal" step="0.01" placeholder="เช่น 265"></div>
         </div>
-        <label>ถ้ารับเข้าหลายก้อนพร้อมกันแต่ไม่แยกเบอร์ ใส่จำนวนก้อนตรงนี้ (ปกติเว้นว่าง)</label><input id="rwBales" type="number" inputmode="numeric" placeholder="เว้นว่าง = 1 ก้อน">
-        <label>เบอร์ก้อน — เลขที่เขียนไว้บนก้อน</label><input id="rwLotNo" type="number" inputmode="numeric" placeholder="ไม่ใส่ = ออกเบอร์ถัดไปให้อัตโนมัติ">
+        <label style="color:var(--accent2); font-weight:600;">★ เบอร์ก้อน — เลขที่เขียนไว้บนก้อนนี้</label>
+        <input id="rwLotNo" type="number" inputmode="numeric" placeholder="เช่น 7 — เลขที่เขียนบนก้อนจริง">
         <div class="sumline" id="rwLotPreview"></div>
+        <details style="margin-top:10px;"><summary style="cursor:pointer; font-size:13px; color:var(--muted);">รับหลายก้อนรวดโดยไม่แยกเบอร์ (ใช้น้อยมาก)</summary>
+          <label style="margin-top:6px;">จำนวนก้อน — <b style="color:var(--yellow)">ไม่ใช่เบอร์ก้อน</b> ปกติเว้นว่าง</label>
+          <input id="rwBales" type="number" inputmode="numeric" placeholder="เว้นว่าง = 1 ก้อน">
+          <div class="sumline" style="color:var(--muted); margin-top:4px;">ใส่ช่องนี้เมื่อรับใยมาหลายก้อนพร้อมกันแล้วไม่ได้เขียนเบอร์แยกทีละก้อน — น้ำหนักด้านบนจะกลายเป็นน้ำหนักรวมของทุกก้อน</div>
+        </details>
         <div class="rf">
           <div><label>ผู้ขาย</label><input id="rwSupplier"></div>
           <div><label>หมายเหตุ</label><input id="rwNote"></div>
@@ -1033,20 +1038,48 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     $('tFiberLots').innerHTML=lots.length?'<tr><th>ใย</th><th>ล็อต</th><th>รับเข้า</th><th>เบิกใช้</th><th>คงเหลือ</th><th>จำนวนก้อน</th><th>วันที่รับ</th><th></th></tr>'+
       lots.slice().reverse().map(l=>{
         const bale=baleByLot[l.fiberName+'||'+l.lotNo];
-        return '<tr><td>'+esc(l.fiberName)+'</td><td>'+l.lotNo+'</td><td>'+l.kg+'</td><td>'+l.used+
-        '</td><td><b style="color:'+(l.remaining<0?'var(--red)':'var(--accent2)')+'">'+l.remaining+'</b></td>'+
+        return '<tr><td>'+esc(l.fiberName)+'</td><td>'+l.lotNo+'</td><td>'+l.kg+'</td>'+
+        '<td>'+(l.used>0?'<button class="ed" data-flwhy="'+esc(l.id||'')+'">'+l.used+' ▾</button>':l.used)+'</td><td>'+
+        ''+
+        '<b style="color:'+(l.remaining<0?'var(--red)':'var(--accent2)')+'">'+l.remaining+'</b></td>'+
         '<td>'+(bale?('เหลือ <b style="color:var(--accent2)">'+bale.remaining+'</b> / '+bale.baleCount+' ก้อน '+
           (bale.remaining>0?'<button class="ed" data-baletick="'+esc(l.fiberName)+'|'+l.lotNo+'">−1 ก้อน</button>':'')+
           (bale.used>0?'<button class="ed" data-baleundo="'+esc(l.fiberName)+'|'+l.lotNo+'">↩ +1</button>':'')):'—')+
-        '</td><td>'+ymd(l.time)+
+        '</td><td class="kn">'+thDate(l.time)+
         '</td><td><button class="ed" data-fladj="'+esc(l.id||'')+'">ปรับยอดคงเหลือ</button> '+
         '<button class="x" data-fldel="'+esc(l.id||'')+'">✕</button></td></tr>';
       }).join('')
       :'<tr><td class="empty">'+(fiberLotFilter?'ใยนี้ยังไม่มีล็อต':'ยังไม่มีข้อมูล')+'</td></tr>';
+    $('tFiberLots').querySelectorAll('[data-flwhy]').forEach(b=>b.onclick=async()=>{
+      const lot=lots.find(l=>l.id===b.dataset.flwhy); if(!lot) return;
+      const rows=PROD.wd.filter(w=>w.fiberName===lot.fiberName && String(w.lot)===String(lot.lotNo))
+        .slice().sort((a,b2)=>String(a.time).localeCompare(String(b2.time)));
+      const lines=rows.slice(0,12).map(w=>{
+        const o=PROD.orders.find(x=>x.id===w.orderId);
+        return '• '+thDate(w.time)+' — '+(+w.kg||0)+' กก.'+(w.seq?' · ก้อน '+w.seq:'')+
+               ' · '+(o?orderLabel(w.orderId):'ออเดอร์ถูกลบไปแล้ว');
+      }).join('\n')+(rows.length>12?'\n• …อีก '+(rows.length-12)+' รายการ':'');
+      await info('ใย "'+lot.fiberName+'" ล็อต '+lot.lotNo+' — หักไป '+lot.used+' กก.',
+        (rows.length? 'มาจาก '+rows.length+' รายการเบิกที่แอพผลิต:\n\n'+lines
+                    : 'ไม่พบรายการเบิกที่ผูกกับล็อตนี้')+
+        '\n\nแก้/ลบรายการเบิกได้ที่ แอพผลิต → ป้อนใย → ประวัติการเบิกใย');
+    });
     $('tFiberLots').querySelectorAll('[data-fldel]').forEach(b=>b.onclick=async()=>{
       const lot=lots.find(l=>l.id===b.dataset.fldel); if(!lot) return;
       if(lot.used>0){
-        await info('ลบล็อตนี้ไม่ได้','ใย "'+lot.fiberName+'" ล็อต '+lot.lotNo+' ถูกเบิกไปใช้แล้ว '+lot.used+' กก.\n\nต้องไปลบรายการเบิกที่แอพผลิตก่อน แล้วค่อยกลับมาลบล็อตนี้');
+        /* อย่าบอกลอยๆ ว่า "ถูกเบิกไปแล้ว" — โชว์รายการที่หักไปจริงให้ดูเลย */
+        const rows=PROD.wd.filter(w=>w.fiberName===lot.fiberName && String(w.lot)===String(lot.lotNo))
+          .slice().sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+        const lines=rows.slice(0,8).map(w=>{
+          const o=PROD.orders.find(x=>x.id===w.orderId);
+          return '• '+thDate(w.time)+' — '+(+w.kg||0)+' กก.'+
+                 (w.seq?' · ก้อน '+w.seq:'')+
+                 ' · '+(o?orderLabel(w.orderId):'ออเดอร์ถูกลบไปแล้ว');
+        }).join('\n')+(rows.length>8?'\n• …อีก '+(rows.length-8)+' รายการ':'');
+        await info('ลบล็อตนี้ไม่ได้ — มีรายการหักออกไปแล้ว',
+          'ใย "'+lot.fiberName+'" ล็อต '+lot.lotNo+' ถูกหักไปแล้ว '+lot.used+' กก. จาก '+rows.length+' รายการ\n\n'+
+          (lines||'(ไม่พบรายละเอียด)')+
+          '\n\nถ้าไม่ได้เบิกจริง ให้ไปลบรายการพวกนี้ที่ แอพผลิต → ป้อนใย → ประวัติการเบิกใย ก่อน แล้วค่อยกลับมาลบล็อตนี้');
         return;
       }
       const nBale=(S.baleUsage||[]).filter(u=>u.fiberName===lot.fiberName && String(u.lotNo)===String(lot.lotNo)).length;
@@ -1097,17 +1130,40 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   }
   function updateRwLotPreview(){
     const n=($('rwSel').value==='__new__')?$('rwName').value.trim():$('rwSel').value;
-    $('rwLotPreview').textContent = n ? 'ล็อตถัดไปของ "'+n+'" จะเป็น: ล็อต '+CALC.nextFiberLot(S.fiberReceipts,n) : '';
+    const _typed=($('rwLotNo')?$('rwLotNo').value.trim():'');
+    const _kg=$('rwKg')?($('rwKg').value.trim()):'';
+    const _bales=($('rwBales')?$('rwBales').value.trim():'');
+    const _next=n?CALC.nextFiberLot(S.fiberReceipts,n):'';
+    if(!n){ $('rwLotPreview').innerHTML=''; return; }
+    if(_typed){
+      const _dup=S.fiberReceipts.some(r=>r.fiberName===n && String(r.lotNo)===String(+_typed));
+      $('rwLotPreview').innerHTML='จะบันทึกเป็น <b style="color:var(--accent2)">เบอร์ '+esc(_typed)+'</b> · '+esc(n)+
+        (_kg?' · '+esc(_kg)+' กก.':'')+(_bales&&+_bales>1?' · <b style="color:var(--yellow)">'+esc(_bales)+' ก้อนรวมกัน</b>':' · 1 ก้อน')+
+        (_dup?'<br><span class="bdg warn">เบอร์นี้มีอยู่แล้วในระบบ</span>':'');
+    } else {
+      $('rwLotPreview').innerHTML='<span class="bdg warn">ยังไม่ได้กรอกเบอร์ก้อน</span> ระบบจะตั้งเบอร์ให้เองเป็น <b>'+_next+
+        '</b> — <span style="color:var(--yellow)">ซึ่งไม่ใช่เลขที่เขียนบนก้อน</span>'+
+        (_bales&&+_bales>1?'<br><span class="bdg bad">คุณกรอกช่อง "จำนวนก้อน" ไว้ '+esc(_bales)+' — ถ้านั่นคือเลขที่เขียนบนก้อน ให้ย้ายมาช่อง ★ เบอร์ก้อน</span>':'');
+    }
   }
   $('rwSel').onchange=function(){ const v=this.value,t=$('rwName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} updateRwLotPreview(); };
   $('rwName').oninput=updateRwLotPreview;
+  ['rwLotNo','rwKg','rwBales'].forEach(id=>{ if($(id)) $(id).oninput=updateRwLotPreview; });
   $('btnRw').onclick=async()=>{
     const n=($('rwSel').value==='__new__'?$('rwName').value:$('rwSel').value).trim(), kg=+$('rwKg').value;
     if(!n||!kg){ toast('กรอกชื่อใยและน้ำหนัก'); return; }
     const customLot=$('rwLotNo').value.trim();
+    const _balesRaw=($('rwBales')?$('rwBales').value.trim():'');
+    if(!customLot){
+      const _auto=CALC.nextFiberLot(S.fiberReceipts,n);
+      if(!await ask('ยังไม่ได้กรอกเบอร์ก้อน',
+        'ระบบจะตั้งเบอร์ให้เองเป็น "เบอร์ '+_auto+'" ซึ่งไม่ใช่เลขที่เขียนบนก้อนจริง'+
+        (_balesRaw&&+_balesRaw>1 ? '\n\n⚠ คุณกรอกช่อง "จำนวนก้อน" ไว้ '+_balesRaw+' — ถ้านั่นคือเลขที่เขียนบนก้อน ให้กดยกเลิกแล้วย้ายมาช่อง ★ เบอร์ก้อน' : '')+
+        '\n\nยืนยันจะให้ระบบออกเบอร์ '+_auto+' ให้หรือไม่?')) return;
+    }
     const lotNo=customLot?+customLot:CALC.nextFiberLot(S.fiberReceipts,n);
     if(customLot && S.fiberReceipts.some(r=>r.fiberName===n && String(r.lotNo)===String(lotNo))){
-      if(!await ask('เบอร์ก้อน '+lotNo+' ของ '+n+' มีอยู่แล้ว','ระบบจะมีก้อนเบอร์ '+lotNo+' ซ้ำกัน 2 ก้อน ทำให้ยอดคงเหลือดูสับสน\n\nแนะนำให้เว้นว่างไว้ ระบบจะออกเบอร์ถัดไปให้เอง\n\nยืนยันจะใช้เบอร์ซ้ำหรือไม่?')) return;
+      if(!await ask('เบอร์ก้อน '+lotNo+' ของ '+n+' มีอยู่แล้ว','ระบบจะมีก้อนเบอร์ '+lotNo+' ซ้ำกัน 2 ก้อน ทำให้ยอดคงเหลือดูสับสน\n\nถ้าเบอร์บนก้อนซ้ำกันจริง กดยืนยันได้เลย (ระบบแยกยอดให้ทีละก้อนอยู่แล้ว)\n\nยืนยันจะใช้เบอร์ซ้ำหรือไม่?')) return;
     }
     const dateVal=$('rwDate').value?$('rwDate').value+'T'+localISO().slice(11):localISO();
     const baleCount=+$('rwBales').value||null;
@@ -1123,14 +1179,34 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     await saveFiber();
     ['rwSupplier','rwNote','rwKg','rwBales','rwLotNo'].forEach(id=>$(id).value='');
     // ชื่อใยที่เลือกไว้ค้างต่อเนื่อง จนกว่าจะเปลี่ยนเอง (มักรับเข้าใยตัวเดิมหลายรอบติดกัน)
-    rFiber(); toast('บันทึกรับเข้าใยแล้ว — ล็อต '+lotNo+(baleCount?' ('+baleCount+' ก้อน)':''));
+    rFiber(); toast('บันทึกรับเข้าใยแล้ว — '+n+' เบอร์ '+lotNo+' · '+kg+' กก.'+(baleCount>1?' ('+baleCount+' ก้อนรวมกัน)':''));
   };
   $('btnTh').onclick=async()=>{ const n=$('thSel').value; if(!n){toast('เลือกใยก่อน');return;} S.fiberTh[n]=+$('thKg').value||0; await saveFiber(); $('thKg').value=''; rFiber(); toast('ตั้งจุดเตือนแล้ว'); };
   let editingFiberId=null;
   async function editFiberReceipt(id){
     const r=S.fiberReceipts.find(x=>x.id===id); if(!r) return;
     editingFiberId=id;
-    const kg=await askText2('แก้ไขน้ำหนักรับเข้า (กก.) — ล็อต '+r.lotNo+' ของ '+r.fiberName, r.kg);
+    const newLot=await askText2('แก้ "เบอร์ก้อน" ของ '+r.fiberName+' (ตอนนี้เบอร์ '+r.lotNo+')\n\nกรอกเลขที่เขียนบนก้อนจริง — เว้นว่างไว้ = ไม่เปลี่ยนเบอร์', '');
+    if(newLot!==null && String(newLot).trim()!==''){
+      const _ln=+String(newLot).trim();
+      if(isNaN(_ln)||_ln<0){ toast('เบอร์ก้อนต้องเป็นตัวเลข — ยังไม่ได้แก้อะไร'); return; }
+      if(_ln!==r.lotNo){
+        const usedKg=(PROD.wd||[]).filter(w=>w.fiberName===r.fiberName && String(w.lot)===String(r.lotNo))
+          .reduce((a,b)=>a+(+b.kg||0),0);
+        if(usedKg>0){
+          await info('เปลี่ยนเบอร์ก้อนนี้ไม่ได้','ก้อนเบอร์ '+r.lotNo+' ของ '+r.fiberName+' ถูกเบิกไปแล้ว '+r3(usedKg)+' กก.\n\nรายการเบิกผูกอยู่กับเบอร์เดิม ถ้าเปลี่ยนตอนนี้ยอดจะเพี้ยน — ต้องลบรายการเบิกที่แอพผลิตก่อน');
+          return;
+        }
+        const _dup=S.fiberReceipts.some(x=>x.fiberName===r.fiberName && String(x.lotNo)===String(_ln) && x.id!==r.id);
+        if(_dup && !await ask('เบอร์ '+_ln+' มีอยู่แล้ว','ระบบจะมีก้อนเบอร์ '+_ln+' ซ้ำกัน 2 ก้อน\n\nยืนยันจะใช้เบอร์ซ้ำหรือไม่?')) return;
+        const _oldLot=r.lotNo;
+        r.lotNo=_ln;
+        r.adjLog=(r.adjLog||[]); r.adjLog.push({ time:localISO(), note:'แก้เบอร์ก้อน '+_oldLot+' → '+_ln });
+        await saveFiber(); rFiber(); toast('แก้เบอร์ก้อน '+_oldLot+' → '+_ln+' ของ '+r.fiberName+' แล้ว');
+        return;
+      }
+    }
+    const kg=await askText2('แก้ไขน้ำหนักรับเข้า (กก.) — เบอร์ '+r.lotNo+' ของ '+r.fiberName, r.kg);
     const v=await readAdjNumber(kg,{current:r.kg,unit:'กก.',what:'น้ำหนักรับเข้าล็อต '+r.lotNo});
     if(v===null) return;
     const _before=r.kg;
@@ -1855,7 +1931,19 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     $('tSackStatus').querySelectorAll('[data-skdel]').forEach(btn=>btn.onclick=async()=>{
       const s=sackStatus.find(x=>x.sackId===btn.dataset.skdel); if(!s) return;
       if(s.used>0){
-        await info('ลบกระสอบนี้ไม่ได้','กระสอบ #'+s.sackNo+' ('+s.name+') ถูกเบิกไปใช้แล้ว '+s.used+' กก.\n\nต้องไปลบรายการเบิกที่แอพผลิตก่อน แล้วค่อยกลับมาลบกระสอบนี้');
+        const rows=[];
+        (PROD.bagWd||[]).forEach(w=>(w.picks||[]).forEach(pk=>{
+          if(pk.sackId===s.sackId) rows.push({time:w.time, kg:(+pk.kg||+pk.take||0), orderId:w.orderId});
+        }));
+        rows.sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+        const lines=rows.slice(0,8).map(w=>{
+          const o=PROD.orders.find(x=>x.id===w.orderId);
+          return '• '+thDate(w.time)+' — '+w.kg+' กก. · '+(o?orderLabel(w.orderId):(w.orderId?'ออเดอร์ถูกลบไปแล้ว':'ไม่ระบุออเดอร์'));
+        }).join('\n')+(rows.length>8?'\n• …อีก '+(rows.length-8)+' รายการ':'');
+        await info('ลบกระสอบนี้ไม่ได้ — มีรายการหักออกไปแล้ว',
+          'กระสอบ #'+s.sackNo+' ('+s.name+') ถูกหักไปแล้ว '+s.used+' กก. จาก '+rows.length+' รายการ\n\n'+
+          (lines||'(ไม่พบรายละเอียด)')+
+          '\n\nถ้าไม่ได้เบิกจริง ให้ไปลบรายการพวกนี้ที่ แอพผลิต → ท้ายไลน์ → เบิกกระสอบถุง ก่อน แล้วค่อยกลับมาลบกระสอบนี้');
         return;
       }
       if(!await ask('ลบกระสอบนี้ทิ้ง?',

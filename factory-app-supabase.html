@@ -915,7 +915,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     },
     // ใยเข้า = ใยที่ป้อนเข้าไลน์ทั้งหมด (ตามสูตรที่ป้อนจริงแต่ละรอบ)
     // ใยออก  = ใยที่ออกมาเป็นสินค้า (น้ำหนักแพ็คจริง หักน้ำหนักถุงออก)
-    fiberBalance(packs, fedKg, scrapKg, withdrawnKg){
+    /* deductedKg = ใยที่หักออกจากก้อนที่ไลน์จริง ๆ — ถ้าน้อยกว่าที่ป้อน แปลว่ามีรอบที่ป้อนตอนยังไม่ได้เบิกก้อน */
+    fiberBalance(packs, fedKg, scrapKg, withdrawnKg, deductedKg){
       let fabAll=0, missing=0;      /* missing = แพ็คหมอนที่ยังไม่ได้กรอกน้ำหนักผ้า */
       const out = (packs||[]).reduce((s,p)=>{
         const w = (p.actualWeight!=null? +p.actualWeight : +p.stdPerPack)||0;
@@ -931,7 +932,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const inn = r3(+fedKg||0);
       const scrap = r3(+scrapKg||0);
       const unaccounted = r3(inn - r3(out) - scrap);
+      const ded = (deductedKg==null? null : r3(+deductedKg||0));
       return { inKg:inn, outKg:r3(out), scrapKg:scrap, wdKg:r3(+withdrawnKg||0),
+               deductedKg:ded, notDeductedKg:(ded==null?0:r3(inn-ded)),
                fabricKg:r3(fabAll), noFabricPacks:missing,
                unaccountedKg:unaccounted, diffKg:unaccounted,
                yieldPct: inn>0 ? Math.round(out/inn*1000)/10 : 0,
@@ -1671,10 +1674,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       return;
     }
     sel.disabled=false;
-    sel.innerHTML='<option value="">— เลือกลอตที่เบิก —</option>'+
+    sel.innerHTML='<option value="">— เลือกก้อนที่หยิบมา —</option>'+
       lots.slice().reverse().map(l=>{
         const rem=lotRemaining(fiberName,l.lotNo,+l.kg||0);
-        return '<option value="'+esc(l.lotNo)+'">ลอต '+esc(l.lotNo)+' — รับ '+l.kg+' กก. เหลือ '+rem+' กก. ('+(l.time||'').slice(0,10)+')</option>';
+        return '<option value="'+esc(l.lotNo)+'">เบอร์ '+esc(l.lotNo)+' · รับเข้า '+l.kg+' กก.'+
+               ((l.time)?' ('+thDate(l.time)+')':'')+' · เหลือ '+rem+' กก.</option>';
       }).join('');
     if(hint) hint.textContent='';
     updateWdLotRemainHint();
@@ -1687,7 +1691,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const remBefore=lotRemaining(fiberName,lotNo,+lot.kg||0);
     const remAfter=Math.round((remBefore-kg)*1000)/1000;
     const balesLeft=STOCKFIBER_BALES[fiberName];
-    hint.innerHTML='ลอตนี้เหลืออยู่ <b>'+remBefore+' กก.</b>'+(balesLeft!=null?' (ทั้งชื่อใยนี้เหลือ '+balesLeft+' ก้อน)':'')+
+    hint.innerHTML='ก้อนนี้เหลืออยู่ <b>'+remBefore+' กก.</b>'+(balesLeft!=null?' (ทั้งชื่อใยนี้เหลือ '+balesLeft+' ก้อน)':'')+
       (kg>0?' — เบิกครั้งนี้แล้วจะเหลือ <b style="color:'+(remAfter<0?'var(--red)':'var(--accent2)')+'">'+remAfter+' กก.</b>':'');
   }
   function wdSelOptions(o,sel){
@@ -3084,7 +3088,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
     const fedKg=r3(Array.from(ids).reduce((s,id)=>s+CALC.usageTotal(feed.filter(x=>x.orderId===id),orderById(id)),0));
     const wdKg=r2(wd.reduce((s,x)=>s+(+x.kg||0),0));
-    const bal=CALC.fiberBalance(line, fedKg, totScrap, wdKg);
+    /* ใยที่หักออกจากก้อนที่ไลน์จริง ๆ ในช่วงเวลาที่ดูอยู่ */
+    const feedIds=new Set(feed.map(f=>f.id));
+    const dedKg=r3((S.use||[]).filter(u=>!u.feedId || feedIds.has(u.feedId)).reduce((a,b)=>a+(+b.kg||0),0));
+    const bal=CALC.fiberBalance(line, fedKg, totScrap, wdKg, dedKg);
     $('balStats').innerHTML=
       '<div class="stat"><div class="v">'+bal.inKg+'</div><div class="l">⬇ ใยเข้า — ป้อนเข้าไลน์ทั้งหมด (กก.)</div></div>'+
       '<div class="stat"><div class="v">'+bal.outKg+'</div><div class="l">⬆ ใยออก — ใยที่อยู่ในสินค้า หักผ้าและถุงแล้ว (กก.)</div></div>'+
@@ -3092,20 +3099,26 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       '<div class="stat"><div class="v">'+bal.scrapKg+'</div><div class="l">เศษ/ของเสีย (กก.)</div></div>'+
       '<div class="stat"><div class="v">'+bal.unaccountedKg+'</div><div class="l">คงเหลือ/หาย = เข้า−ออก−เศษ (กก.)</div></div>';
     /* เตือนเรื่องน้ำหนักผ้าปลอก ต้องขึ้นเสมอ ถึงจะยังไม่ได้ป้อนใยในช่วงนั้นก็ตาม */
+    /* รอบที่ป้อนตอนยังไม่ได้เบิกก้อน — ใยเข้านับตามสูตร แต่ไม่มีก้อนให้หัก */
+    const _dedLine=(bal.notDeductedKg>0.005
+      ? '<span class="bdg warn">มี '+bal.notDeductedKg+' กก. ที่นับว่าป้อนเข้าไลน์ แต่ยังไม่ได้หักจากก้อนไหน</span> '+
+        '<span style="color:var(--dim)">(ป้อนรอบตอนที่ยังไม่ได้กดเบิกก้อน — ไปกดเบิกย้อนหลังที่ ป้อนใย → เบิกใย แล้วยอดจะตรงกัน)</span><br>'
+      : (bal.deductedKg!=null && bal.inKg>0
+        ? '<span style="color:var(--dim)">หักจากก้อนที่ไลน์จริง '+bal.deductedKg+' กก. — ตรงกับที่ป้อนเข้าไลน์</span><br>' : ''));
     const _fabLine=(bal.fabricKg?'<span style="color:var(--dim)">หมอน = ผ้าปลอก + ใย — ผ้าปลอก '+bal.fabricKg+' กก. ถูกหักออกจากน้ำหนักสินค้าแล้ว ไม่นับเป็นใย</span><br>':'')+
       (bal.noFabricPacks?'<span class="bdg warn">'+bal.noFabricPacks+' แพ็คยังไม่ได้กรอกน้ำหนักผ้าปลอก — ตัวเลข "ใยออก" จะสูงเกินจริง</span> '+
         '<span style="color:var(--dim)">ไปกรอกที่ ท้ายไลน์ → ตั้งค่าน้ำหนัก Standard</span><br>':'');
     $('balNote').innerHTML= bal.inKg
       ? '<b style="color:var(--accent2)">ใยเข้า '+bal.inKg+' กก. → ใยออกอยู่ในสินค้า '+bal.outKg+' กก. + เศษ '+
         bal.scrapKg+' กก. + คงเหลือ/หาย '+bal.unaccountedKg+' กก.</b><br>'+
-        _fabLine+
+        _dedLine+_fabLine+
         'อัตราเป็นสินค้า '+bal.yieldPct+'%'+
         (Math.abs(bal.unaccountedKg)>bal.inKg*0.05
           ? ' <span class="bdg warn">ต่างเกิน 5% — อาจมีใยค้างในไลน์ หรือยังชั่งเศษไม่ครบ</span>'
           : ' <span class="bdg ok">สมดุลปกติ</span>')+
         '<br><span style="color:var(--dim)">อ้างอิง: เบิกใยจากคลัง '+bal.wdKg+' กก. · เทียบกับที่ป้อนเข้าไลน์ '+
         (bal.stockDiffKg>0?'เหลือค้างยังไม่ป้อน '+bal.stockDiffKg:bal.stockDiffKg<0?'ป้อนมากกว่าที่เบิก '+r3(-bal.stockDiffKg):'ตรงกันพอดี 0')+' กก.</span>'
-      : _fabLine+'ยังไม่มีการป้อนใยในช่วงนี้ — กดปุ่มนับที่แท็บ "ป้อนใย" เพื่อเริ่มนับใยเข้า';
+      : _dedLine+_fabLine+'ยังไม่มีการป้อนใยในช่วงนี้ — กดปุ่มนับที่แท็บ "ป้อนใย" เพื่อเริ่มนับใยเข้า';
 
     $('tSumOrder').innerHTML=rows
       ? '<tr><th>ลูกค้า</th><th>รหัส</th><th>เวลาผลิตจริง</th><th>เริ่ม</th><th>จบ</th><th>แพ็คที่ผลิต</th>'+
