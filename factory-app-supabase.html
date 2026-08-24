@@ -865,6 +865,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const n = +((spec||{}).piecesPerPack)||0;
       return n>0 ? r3(total/n) : 0;
     },
+    /* หมอน 1 ใบ = ผ้าปลอก + ใย  — ใยเข้าคือป้อนใย ใยออกคือใยที่อยู่ในหมอน
+       ออเดอร์ที่ยังไม่ได้กรอกน้ำหนักผ้า ให้ถือว่าทั้งชิ้นเป็นใย (เท่าพฤติกรรมเดิมเป๊ะ) */
+    fabricKgPerPiece(spec){ return r3(+((spec||{}).fabricWeightPerPiece)||0); },
+    fiberKgPerPiece(spec){
+      if(!spec) return 0;
+      const w=+spec.weightPerPiece||0, f=+spec.fabricWeightPerPiece||0;
+      if(spec.fiberWeightPerPiece!=null && spec.fiberWeightPerPiece!=='') return r3(+spec.fiberWeightPerPiece||0);
+      return f>0 ? r3(Math.max(0,w-f)) : r3(w);
+    },
+    fabricKgPerPack(spec){ return r3(CALC.fabricKgPerPiece(spec) * (+((spec||{}).piecesPerPack)||0)); },
+    fiberKgPerPack(spec){ return r3(CALC.fiberKgPerPiece(spec) * (+((spec||{}).piecesPerPack)||0)); },
+    /* ผ้าปลอกที่ติดไปกับแพ็คนี้ — ข้อมูลเก่าไม่มี = 0 (ยอดเดิมไม่ขยับ) */
+    packFabricKg(p){
+      if(!p) return 0;
+      if(p.fabricKgPerPack!=null) return r3(+p.fabricKgPerPack||0);
+      return r3((+p.fabricPiece||0) * (+p.piecesPerPack||0));
+    },
     recipeTotal(fibers){
       return r3((fibers||[]).reduce((s,f)=>s+(+f.kg||0),0));
     },
@@ -899,17 +916,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     // ใยเข้า = ใยที่ป้อนเข้าไลน์ทั้งหมด (ตามสูตรที่ป้อนจริงแต่ละรอบ)
     // ใยออก  = ใยที่ออกมาเป็นสินค้า (น้ำหนักแพ็คจริง หักน้ำหนักถุงออก)
     fiberBalance(packs, fedKg, scrapKg, withdrawnKg){
+      let fabAll=0, missing=0;      /* missing = แพ็คหมอนที่ยังไม่ได้กรอกน้ำหนักผ้า */
       const out = (packs||[]).reduce((s,p)=>{
         const w = (p.actualWeight!=null? +p.actualWeight : +p.stdPerPack)||0;
         const bagTotal = (p.bagKgPerPack!=null)
           ? (+p.bagKgPerPack||0)
           : (p.bagPerPiece ? (+p.bagWeight||0)*(+p.piecesPerPack||0) : (+p.bagWeight||0));
-        return s + Math.max(0, w - bagTotal);
+        /* หมอน = ผ้าปลอก + ใย → ใยออกต้องหักผ้าออกก่อน ไม่งั้นใยออกจะสูงเกินจริง */
+        const fabTotal = CALC.packFabricKg(p);
+        fabAll += fabTotal;
+        if((p.productType && p.productType!=='ใย') && !fabTotal) missing++;
+        return s + Math.max(0, w - bagTotal - fabTotal);
       },0);
       const inn = r3(+fedKg||0);
       const scrap = r3(+scrapKg||0);
       const unaccounted = r3(inn - r3(out) - scrap);
       return { inKg:inn, outKg:r3(out), scrapKg:scrap, wdKg:r3(+withdrawnKg||0),
+               fabricKg:r3(fabAll), noFabricPacks:missing,
                unaccountedKg:unaccounted, diffKg:unaccounted,
                yieldPct: inn>0 ? Math.round(out/inn*1000)/10 : 0,
                stockDiffKg: r3((+withdrawnKg||0) - inn) };
@@ -2110,9 +2133,17 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
 
     f.innerHTML='<h3>'+(isSet?'แก้ไขน้ำหนัก Standard':'① ตั้งค่าน้ำหนัก Standard ก่อนเริ่มบันทึก')+'</h3>'+
-      '<div class="rf"><div><label>น้ำหนักที่ต้องการต่อชิ้น (กก.)</label>'+
+      '<div class="rf"><div><label>'+(isPillow?'น้ำหนักหมอนต่อชิ้น (กก.) — ผ้า + ใย':'น้ำหนักที่ต้องการต่อชิ้น (กก.)')+'</label>'+
       '<input id="spW" type="number" inputmode="decimal" step="0.001" value="'+(sp.weightPerPiece||'')+'"></div>'+
       '<div><label>จำนวนชิ้นต่อแพ็ค</label><input id="spN" type="number" inputmode="numeric" value="'+(sp.piecesPerPack||'')+'"></div></div>'+
+      (isPillow ? (
+        '<div class="rf"><div><label>น้ำหนักผ้าปลอกเปล่า (กก./ชิ้น)</label>'+
+        '<input id="spFabKg" type="number" inputmode="decimal" step="0.001" value="'+(sp.fabricWeightPerPiece||'')+'" placeholder="ชั่งปลอกที่ยังไม่ยัดใย"></div>'+
+        '<div><label>น้ำหนักใยในหมอน 1 ใบ (กก.)</label>'+
+        '<input id="spFiberKg" type="number" inputmode="decimal" step="0.001" value="'+(CALC.fiberKgPerPiece(sp)||'')+'" placeholder="ระบบคิดให้"></div></div>'+
+        '<div class="sumline" style="margin-top:2px;">ผ้า + ใย = น้ำหนักหมอนต่อชิ้น — กรอกช่องไหนก็ได้ อีกช่องคิดให้เอง<br>'+
+        '<span style="color:var(--dim)">ใช้แยกในหน้า <b>สรุป → สมดุลใย เข้า–ออก</b> ว่า "ใยออก" คือใยจริง ๆ กี่กิโล ไม่ปนน้ำหนักผ้า</span></div>'
+      ) : '')+
       bagBlockHTML('spBag','','zip',sp,isPillow,'ถุงซิล')+
       (isPillow ? (
         '<div class="rf"><div><label>ใช้ถุงซิลกี่ใบต่อ 1 แพ็ค</label>'+
@@ -2233,6 +2264,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const prev=()=>{
       const s=isPillow ? {
         weightPerPiece:+$('spW').value||0, piecesPerPack:+$('spN').value||0,
+        fabricWeightPerPiece:$('spFabKg')?(+$('spFabKg').value||0):0,
+        fiberWeightPerPiece:$('spFiberKg')&&$('spFiberKg').value!==''?(+$('spFiberKg').value||0):null,
         bagName:normSize($('spBag').value), bagWeight:+$('spBagW').value||0, zipPerPack:+$('spZipN').value||0,
         packBagName:$('spPackBag')?normSize($('spPackBag').value):'',
         packBagWeight:$('spPackW')?(+$('spPackW').value||0):0,
@@ -2246,13 +2279,36 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       $('spPreview').innerHTML=t
         ? '<div class="v">'+t+' กก.</div><div class="l">น้ำหนัก Standard ต่อแพ็ค (เฉลี่ยต่อชิ้น '+CALC.stdPerPiece(s)+' กก.)'+
           '<br>หมอน: '+s.weightPerPiece+' กก./ชิ้น × '+s.piecesPerPack+' ชิ้น = '+r3(s.weightPerPiece*s.piecesPerPack)+' กก.'+
+          (isPillow && CALC.fabricKgPerPiece(s)>0
+            ? '<br><span style="color:var(--dim)">— ผ้าปลอก '+CALC.fabricKgPerPiece(s)+' กก./ชิ้น = '+CALC.fabricKgPerPack(s)+
+              ' กก. · ใย '+CALC.fiberKgPerPiece(s)+' กก./ชิ้น = '+CALC.fiberKgPerPack(s)+' กก.</span>'
+            : (isPillow ? '<br><span style="color:var(--yellow)">— ยังไม่ได้กรอกน้ำหนักผ้าปลอก หน้าสรุปจะนับทั้งชิ้นเป็นใย</span>' : ''))+
           (zipKg?'<br>ถุงซิล: '+s.bagWeight+' กก./ใบ × '+CALC.zipPerPack(s)+' ใบ = '+zipKg+' กก.':'')+
           (packKg?'<br>ถุงแพ็ค: '+s.packBagWeight+' กก./ใบ × '+CALC.packBagPerPack(s)+' ใบ = '+packKg+' กก.':'')+
           (function(){ const ws=specWarnings(s); return ws.length
             ? '<br><span class="bdg warn" style="margin-top:6px; display:inline-block;">⚠ ตรวจตัวเลขอีกครั้ง</span><br><span style="color:var(--yellow)">· '+ws.map(esc).join('<br>· ')+'</span>' : ''; })()+'</div>'
         : '<div class="l">กรอกน้ำหนักต่อชิ้นและจำนวนชิ้นต่อแพ็ค แล้วระบบจะคำนวณให้</div>';
     };
-    ['spW','spN','spBagW','spZipN','spPackW','spPackN'].forEach(id=>{ if($(id)) $(id).oninput=()=>{ formDirty=true; prev(); }; });
+    /* ผ้า + ใย = น้ำหนักหมอนต่อชิ้น — พิมพ์ช่องไหน อีกช่องคิดให้ */
+    let _splitBusy=false;
+    function syncSplit(src){
+      if(_splitBusy) return; _splitBusy=true;
+      try{
+        const W=$('spW'), F=$('spFabKg'), Y=$('spFiberKg');
+        if(!W||!F||!Y) return;
+        const num=e=>(e.value===''?null:(+e.value||0));
+        const w=num(W), f=num(F), y=num(Y);
+        if(src==='fab' && w!=null && f!=null)       Y.value=r3(Math.max(0,w-f));
+        else if(src==='fiber' && w!=null && y!=null) F.value=r3(Math.max(0,w-y));
+        else if(src==='w'){
+          if(f!=null)      Y.value=r3(Math.max(0,(w||0)-f));
+          else if(y!=null) F.value=r3(Math.max(0,(w||0)-y));
+        }
+      } finally { _splitBusy=false; }
+    }
+    if($('spFabKg'))   $('spFabKg').oninput  =()=>{ formDirty=true; syncSplit('fab');   prev(); };
+    if($('spFiberKg')) $('spFiberKg').oninput=()=>{ formDirty=true; syncSplit('fiber'); prev(); };
+    ['spW','spN','spBagW','spZipN','spPackW','spPackN'].forEach(id=>{ if($(id)) $(id).oninput=()=>{ formDirty=true; if(id==='spW') syncSplit('w'); prev(); }; });
     wireAutoFill();
     if($('spPackBag')) $('spPackBag').addEventListener('input',refreshPackBagLotOptions);
     ['spBag','spBag2','spTol','spPackBag','spFabType','spFabSize','spBagSize','spBag2Size'].forEach(id=>{ if($(id)) $(id).oninput=()=>{ formDirty=true; }; });
@@ -2261,6 +2317,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       o.spec=o.spec||{};
       if($('spW')) o.spec.weightPerPiece=+$('spW').value||0;
       if($('spN')) o.spec.piecesPerPack=+$('spN').value||0;
+      if($('spFabKg')) o.spec.fabricWeightPerPiece=+$('spFabKg').value||0;
+      if($('spFiberKg')&&$('spFiberKg').value!=='') o.spec.fiberWeightPerPiece=+$('spFiberKg').value||0;
       if($('spBag')) o.spec.bagName=normSize($('spBag').value);
       if($('spBagW')) o.spec.bagWeight=+$('spBagW').value||0;
       if($('spBagSize')) o.spec.bagSize=normSize($('spBagSize').value);
@@ -2299,7 +2357,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const _ws=specWarnings(_draft);
       if(_ws.length && !await ask('ตัวเลขดูผิดปกติ — ตรวจอีกครั้งก่อนบันทึก',
         _ws.map(x=>'• '+x).join('\n')+'\n\nระบบจะหักถุงออกจากสต๊อกตามตัวเลขนี้ทุกแพ็ค ถ้าผิดสต๊อกจะเพี้ยนสะสม\n\nยืนยันว่าตัวเลขถูกต้องแล้ว?')) return;
-      o.spec={ weightPerPiece:w, piecesPerPack:n, bagName:normSize($('spBag').value), bagWeight:+$('spBagW').value||0,
+      const _fabKg = isPillow && $('spFabKg') ? (+$('spFabKg').value||0) : 0;
+      const _fibKg = isPillow && $('spFiberKg') && $('spFiberKg').value!=='' ? (+$('spFiberKg').value||0)
+                                                                            : r3(Math.max(0,w-_fabKg));
+      o.spec={ weightPerPiece:w, piecesPerPack:n,
+        fabricWeightPerPiece:_fabKg, fiberWeightPerPiece:_fibKg,
+        bagName:normSize($('spBag').value), bagWeight:+$('spBagW').value||0,
         bagSize: isPillow && $('spBagSize') ? normSize($('spBagSize').value) : '',
         bagSackNo: isPillow && $('spBagSack') ? $('spBagSack').value : '',
         zipPerPack: isPillow && $('spZipN') ? (+$('spZipN').value||0) : 1,
@@ -2392,6 +2455,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       piecesPerPack:+o.spec.piecesPerPack||0,
       bagWeight:+o.spec.bagWeight||0, bagPerPiece:!!o.spec.bagPerPiece, tolPct:+o.spec.tolPct||3,
       bagKgPerPack:r3(CALC.zipKgPerPack(o.spec)+CALC.packKgPerPack(o.spec)),
+      fabricPiece:CALC.fabricKgPerPiece(o.spec), fiberPiece:CALC.fiberKgPerPiece(o.spec),
+      fabricKgPerPack:CALC.fabricKgPerPack(o.spec), fiberKgPerPack:CALC.fiberKgPerPack(o.spec),
       zipPerPack:CALC.zipPerPack(o.spec), packPerPack:CALC.packBagPerPack(o.spec),
       stdPerPack:std, actualWeight:act, diff:act==null?null:CALC.packDiff(act,std),
       actualPiece:pc, diffPiece:pc==null?null:CALC.packDiff(pc,+o.spec.weightPerPiece||0),
@@ -3022,19 +3087,25 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const bal=CALC.fiberBalance(line, fedKg, totScrap, wdKg);
     $('balStats').innerHTML=
       '<div class="stat"><div class="v">'+bal.inKg+'</div><div class="l">⬇ ใยเข้า — ป้อนเข้าไลน์ทั้งหมด (กก.)</div></div>'+
-      '<div class="stat"><div class="v">'+bal.outKg+'</div><div class="l">⬆ ใยออก — เป็นสินค้า หักถุงแล้ว (กก.)</div></div>'+
+      '<div class="stat"><div class="v">'+bal.outKg+'</div><div class="l">⬆ ใยออก — ใยที่อยู่ในสินค้า หักผ้าและถุงแล้ว (กก.)</div></div>'+
+      '<div class="stat"><div class="v">'+bal.fabricKg+'</div><div class="l">ผ้าปลอกในสินค้า — ไม่นับเป็นใย (กก.)</div></div>'+
       '<div class="stat"><div class="v">'+bal.scrapKg+'</div><div class="l">เศษ/ของเสีย (กก.)</div></div>'+
       '<div class="stat"><div class="v">'+bal.unaccountedKg+'</div><div class="l">คงเหลือ/หาย = เข้า−ออก−เศษ (กก.)</div></div>';
+    /* เตือนเรื่องน้ำหนักผ้าปลอก ต้องขึ้นเสมอ ถึงจะยังไม่ได้ป้อนใยในช่วงนั้นก็ตาม */
+    const _fabLine=(bal.fabricKg?'<span style="color:var(--dim)">หมอน = ผ้าปลอก + ใย — ผ้าปลอก '+bal.fabricKg+' กก. ถูกหักออกจากน้ำหนักสินค้าแล้ว ไม่นับเป็นใย</span><br>':'')+
+      (bal.noFabricPacks?'<span class="bdg warn">'+bal.noFabricPacks+' แพ็คยังไม่ได้กรอกน้ำหนักผ้าปลอก — ตัวเลข "ใยออก" จะสูงเกินจริง</span> '+
+        '<span style="color:var(--dim)">ไปกรอกที่ ท้ายไลน์ → ตั้งค่าน้ำหนัก Standard</span><br>':'');
     $('balNote').innerHTML= bal.inKg
-      ? '<b style="color:var(--accent2)">ใยเข้า '+bal.inKg+' กก. → ใยออกเป็นสินค้า '+bal.outKg+' กก. + เศษ '+
+      ? '<b style="color:var(--accent2)">ใยเข้า '+bal.inKg+' กก. → ใยออกอยู่ในสินค้า '+bal.outKg+' กก. + เศษ '+
         bal.scrapKg+' กก. + คงเหลือ/หาย '+bal.unaccountedKg+' กก.</b><br>'+
+        _fabLine+
         'อัตราเป็นสินค้า '+bal.yieldPct+'%'+
         (Math.abs(bal.unaccountedKg)>bal.inKg*0.05
           ? ' <span class="bdg warn">ต่างเกิน 5% — อาจมีใยค้างในไลน์ หรือยังชั่งเศษไม่ครบ</span>'
           : ' <span class="bdg ok">สมดุลปกติ</span>')+
         '<br><span style="color:var(--dim)">อ้างอิง: เบิกใยจากคลัง '+bal.wdKg+' กก. · เทียบกับที่ป้อนเข้าไลน์ '+
         (bal.stockDiffKg>0?'เหลือค้างยังไม่ป้อน '+bal.stockDiffKg:bal.stockDiffKg<0?'ป้อนมากกว่าที่เบิก '+r3(-bal.stockDiffKg):'ตรงกันพอดี 0')+' กก.</span>'
-      : 'ยังไม่มีการป้อนใยในช่วงนี้ — กดปุ่มนับที่แท็บ "ป้อนใย" เพื่อเริ่มนับใยเข้า';
+      : _fabLine+'ยังไม่มีการป้อนใยในช่วงนี้ — กดปุ่มนับที่แท็บ "ป้อนใย" เพื่อเริ่มนับใยเข้า';
 
     $('tSumOrder').innerHTML=rows
       ? '<tr><th>ลูกค้า</th><th>รหัส</th><th>เวลาผลิตจริง</th><th>เริ่ม</th><th>จบ</th><th>แพ็คที่ผลิต</th>'+
