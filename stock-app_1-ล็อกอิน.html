@@ -879,12 +879,25 @@ window.WPDAUTH = {
     bagAggregate(sackStatusList, kind){
       const m={};
       sackStatusList.filter(s=>s.kind===kind).forEach(s=>{
-        m[s.name]=m[s.name]||{name:s.name,receivedKg:0,remainingKg:0,weightPerBag:s.weightPerBag};
+        m[s.name]=m[s.name]||{name:s.name,receivedKg:0,remainingKg:0,weightPerBag:s.weightPerBag,
+                              sackCount:0, weights:[], sizes:[], lastTime:''};
         m[s.name].receivedKg=r3(m[s.name].receivedKg+s.sackWeightKg);
         m[s.name].remainingKg=r3(m[s.name].remainingKg+s.remainingKg);
-        m[s.name].weightPerBag=s.weightPerBag; // ใช้ค่าล่าสุด
+        m[s.name].sackCount++;
+        const w=+s.weightPerBag||0;
+        if(w>0 && m[s.name].weights.indexOf(w)<0) m[s.name].weights.push(w);
+        if(s.size && m[s.name].sizes.indexOf(s.size)<0) m[s.name].sizes.push(s.size);
+        /* น้ำหนัก/ใบ ที่โชว์บนการ์ด = ของกระสอบที่รับเข้าล่าสุด */
+        if(String(s.time||'') >= String(m[s.name].lastTime||'')){ m[s.name].lastTime=s.time||''; m[s.name].weightPerBag=s.weightPerBag; }
       });
-      return Object.values(m).map(v=>({...v, remainingPieces: CALC.sackPieces(v.remainingKg, v.weightPerBag)}));
+      return Object.values(m).map(v=>{
+        const ws=v.weights.slice().sort((a,b)=>a-b);
+        return {...v, weights:ws, weightMin:ws.length?ws[0]:0, weightMax:ws.length?ws[ws.length-1]:0,
+          mixedWeight: ws.length>1,
+          /* ใบคงเหลือ นับทีละกระสอบด้วยน้ำหนัก/ใบ ของกระสอบนั้นเอง จะได้ไม่เพี้ยนเวลาแต่ละล็อตหนักไม่เท่ากัน */
+          remainingPieces: sackStatusList.filter(s=>s.kind===kind && s.name===v.name)
+            .reduce((a,s)=>a+CALC.sackPieces(Math.max(0,s.remainingKg), s.weightPerBag),0)};
+      });
     },
     finStock(producedByOrder, shipments, adjustments){
       const m={};
@@ -1832,10 +1845,21 @@ window.WPDAUTH = {
     const sackStatus=CALC.sackStatus(S.sackReceipts,PROD.bagWd);
     const zip=CALC.bagAggregate(sackStatus,'zip');
     const pack=CALC.bagAggregate(sackStatus,'pack');
-    $('zipCards').innerHTML=zip.length?zip.map(z=>'<div class="scard'+(z.remainingKg<5?' lowstock':'')+'" data-bagcard="zip|'+esc(z.name)+'" style="cursor:pointer;"><div class="nm">'+esc(z.name)+' <span class="bdg ok">ถุงซิล</span></div>'+
-      '<div class="n">'+z.remainingKg+' <span style="font-size:13px;color:#ffffff;">กก.</span></div><div class="l">≈ '+z.remainingPieces+' ใบ (รับเข้ารวม '+z.receivedKg+' กก.)</div></div>').join(''):'<div class="empty">ยังไม่มีข้อมูลถุงซิล</div>';
-    $('packCards').innerHTML=pack.length?pack.map(p=>'<div class="scard'+(p.remainingKg<5?' lowstock':'')+'" data-bagcard="pack|'+esc(p.name)+'" style="cursor:pointer;"><div class="nm">'+esc(p.name)+' <span class="bdg warn">ถุงแพ็ค</span></div>'+
-      '<div class="n">'+p.remainingKg+' <span style="font-size:13px;color:#ffffff;">กก.</span></div><div class="l">≈ '+p.remainingPieces+' ใบ (รับเข้ารวม '+p.receivedKg+' กก.)</div></div>').join(''):'<div class="empty">ยังไม่มีข้อมูลถุงแพ็ค</div>';
+    /* บรรทัดน้ำหนักต่อใบบนการ์ด — ถุงคนละล็อตหนักไม่เท่ากัน ต้องเห็นตั้งแต่หน้าแรก */
+    function wpbLine(v){
+      if(!v.weights.length) return '<span style="color:var(--yellow)">ยังไม่ได้ลงน้ำหนักต่อใบ</span>';
+      if(!v.mixedWeight) return 'น้ำหนัก/ใบ <b style="color:var(--accent2)">'+v.weightMin+'</b> กก.';
+      return 'น้ำหนัก/ใบ <b style="color:var(--yellow)">'+v.weightMin+'–'+v.weightMax+'</b> กก. — แต่ละกระสอบไม่เท่ากัน';
+    }
+    function bagCardHTML(v, kind, badge){
+      return '<div class="scard'+(v.remainingKg<5?' lowstock':'')+'" data-bagcard="'+kind+'|'+esc(v.name)+'" style="cursor:pointer;">'+
+        '<div class="nm">'+esc(v.name)+' '+badge+'</div>'+
+        '<div class="n">'+v.remainingKg+' <span style="font-size:13px;color:#ffffff;">กก.</span></div>'+
+        '<div class="l">≈ '+v.remainingPieces+' ใบ · '+v.sackCount+' กระสอบ (รับเข้ารวม '+v.receivedKg+' กก.)<br>'+
+        wpbLine(v)+(v.sizes.length?' · ไซซ์ '+esc(v.sizes.join(', ')):'')+'<br>แตะดูรายกระสอบ ▾</div></div>';
+    }
+    $('zipCards').innerHTML=zip.length?zip.map(z=>bagCardHTML(z,'zip','<span class="bdg ok">ถุงซิล</span>')).join(''):'<div class="empty">ยังไม่มีข้อมูลถุงซิล</div>';
+    $('packCards').innerHTML=pack.length?pack.map(p=>bagCardHTML(p,'pack','<span class="bdg warn">ถุงแพ็ค</span>')).join(''):'<div class="empty">ยังไม่มีข้อมูลถุงแพ็ค</div>';
 
     const zn=allBagNames('zip'), pn=allBagNames('pack');
     const curKind=$('bagKind').value;
@@ -1848,12 +1872,35 @@ window.WPDAUTH = {
     let sackRows=sackStatus.slice();
     if(bagCardFilter){ const [k,nm]=bagCardFilter.split('|'); sackRows=sackRows.filter(x=>x.kind===k && x.name===nm); }
     const sackBar=$('sackBar');
-    if(sackBar) sackBar.innerHTML = bagCardFilter ? filterBar('btnClearBag',bagCardFilter.split('|')[1]) : '';
+    if(sackBar){
+      let extra='';
+      if(bagCardFilter){
+        const [k,nm]=bagCardFilter.split('|');
+        const agg=(k==='zip'?zip:pack).find(v=>v.name===nm);
+        if(agg) extra='<div class="sumline" style="margin:2px 0 6px;">'+
+          esc(nm)+' — '+agg.sackCount+' กระสอบ · เหลือ <b style="color:var(--accent2)">'+agg.remainingKg+' กก. ≈ '+agg.remainingPieces+' ใบ</b> · '+
+          (agg.weights.length
+            ? (agg.mixedWeight
+                ? 'น้ำหนัก/ใบ <b style="color:var(--yellow)">'+agg.weights.join(' / ')+'</b> กก. — แต่ละกระสอบไม่เท่ากัน ดูทีละกระสอบด้านล่าง'
+                : 'น้ำหนัก/ใบ <b style="color:var(--accent2)">'+agg.weightMin+'</b> กก. ทุกกระสอบ')
+            : '<span style="color:var(--yellow)">ยังไม่ได้ลงน้ำหนักต่อใบ</span>')+'</div>';
+      }
+      sackBar.innerHTML = (bagCardFilter ? filterBar('btnClearBag',bagCardFilter.split('|')[1]) : '') + extra;
+    }
     if($('btnClearBag')) $('btnClearBag').onclick=()=>{ bagCardFilter=null; rBag(); };
-    $('tSackStatus').innerHTML=sackRows.length?'<tr><th>กระสอบ #</th><th>ประเภท</th><th>ชื่อ</th><th>ไซซ์</th><th>น้ำหนักกระสอบ</th><th>เบิกแล้ว</th><th>คงเหลือ</th><th>≈ใบ</th><th></th></tr>'+
-      sackRows.slice().sort((a,b)=>b.time<a.time?-1:1).map(s=>'<tr><td>#'+s.sackNo+'</td><td>'+(s.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+'</td><td>'+esc(s.name)+'</td><td>'+esc(s.size||'—')+
-        '</td><td>'+s.sackWeightKg+' กก.</td><td>'+s.used+' กก.</td><td><b style="color:'+(s.remainingKg>0?'var(--accent2)':'var(--dim)')+'">'+s.remainingKg+' กก.</b></td><td>'+s.remainingPieces+
-        '</td><td><button class="ed" data-skadj="'+s.sackId+'">ปรับยอดคงเหลือ</button></td></tr>').join('')
+    /* น้ำหนัก/ใบ ที่ต่างจากพวกเดียวกัน ให้เห็นชัด จะได้จับได้เวลาลงผิด */
+    const _wpbByName={};
+    sackStatus.forEach(s=>{ const k=s.kind+'|'+s.name, w=+s.weightPerBag||0;
+      _wpbByName[k]=_wpbByName[k]||[]; if(w>0&&_wpbByName[k].indexOf(w)<0) _wpbByName[k].push(w); });
+    $('tSackStatus').innerHTML=sackRows.length?'<tr><th>กระสอบ #</th><th>ประเภท</th><th>ชื่อ</th><th>ไซซ์</th><th>น้ำหนัก/ใบ</th><th>รับเข้าวันที่</th><th>น้ำหนักกระสอบ</th><th>เบิกแล้ว</th><th>คงเหลือ</th><th>≈ใบ</th><th></th></tr>'+
+      sackRows.slice().sort((a,b)=>b.time<a.time?-1:1).map(s=>{
+        const mixed=(_wpbByName[s.kind+'|'+s.name]||[]).length>1;
+        const wpb=(+s.weightPerBag||0);
+        return '<tr><td>#'+s.sackNo+'</td><td>'+(s.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+'</td><td>'+esc(s.name)+'</td><td>'+esc(s.size||'—')+
+        '</td><td class="kn"><b style="color:'+(wpb? (mixed?'var(--yellow)':'var(--accent2)') :'var(--dim)')+'">'+(wpb?wpb+' กก.':'—')+'</b></td>'+
+        '<td class="kn">'+thDate(s.time)+'</td>'+
+        '<td>'+s.sackWeightKg+' กก.</td><td>'+s.used+' กก.</td><td><b style="color:'+(s.remainingKg>0?'var(--accent2)':'var(--dim)')+'">'+s.remainingKg+' กก.</b></td><td>'+s.remainingPieces+
+        '</td><td><button class="ed" data-skadj="'+s.sackId+'">ปรับยอดคงเหลือ</button></td></tr>'; }).join('')
       :'<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';
     ['zipCards','packCards'].forEach(id=>{
       const box=$(id); if(!box) return;
