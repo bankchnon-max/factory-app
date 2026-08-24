@@ -143,10 +143,14 @@
         <label style="color:var(--accent2); font-weight:600;">★ เบอร์ก้อน — เลขที่เขียนไว้บนก้อนนี้</label>
         <input id="rwLotNo" type="number" inputmode="numeric" placeholder="เช่น 7 — เลขที่เขียนบนก้อนจริง">
         <div class="sumline" id="rwLotPreview"></div>
-        <details style="margin-top:10px;"><summary style="cursor:pointer; font-size:13px; color:var(--muted);">รับหลายก้อนรวดโดยไม่แยกเบอร์ (ใช้น้อยมาก)</summary>
-          <label style="margin-top:6px;">จำนวนก้อน — <b style="color:var(--yellow)">ไม่ใช่เบอร์ก้อน</b> ปกติเว้นว่าง</label>
-          <input id="rwBales" type="number" inputmode="numeric" placeholder="เว้นว่าง = 1 ก้อน">
-          <div class="sumline" style="color:var(--muted); margin-top:4px;">ใส่ช่องนี้เมื่อรับใยมาหลายก้อนพร้อมกันแล้วไม่ได้เขียนเบอร์แยกทีละก้อน — น้ำหนักด้านบนจะกลายเป็นน้ำหนักรวมของทุกก้อน</div>
+        <details style="margin-top:10px;" id="rwBulkBox"><summary style="cursor:pointer; font-size:14px; color:var(--accent2); font-weight:600;">➕ รับหลายก้อนรวดเดียว — น้ำหนักเท่ากันทุกก้อน</summary>
+          <div class="sumline" style="margin-top:6px;">ใช้ตอนรับใยมาทีเดียวหลายก้อน น้ำหนักก้อนละเท่ากัน — ระบบจะ<b style="color:var(--accent2)">สร้างแยกทีละก้อนพร้อมเบอร์ของตัวเอง</b> จะได้เบิกใช้ทีละก้อนได้ตามปกติ</div>
+          <div class="rf" style="margin-top:8px;">
+            <div><label>รับกี่ก้อน</label><input id="rwBulkN" type="number" inputmode="numeric" min="2" placeholder="เช่น 10"></div>
+            <div><label>เบอร์ก้อนเริ่มต้น</label><input id="rwBulkStart" type="number" inputmode="numeric" placeholder="เว้นว่าง = ใช้เบอร์ด้านบน / ต่อจากเบอร์ล่าสุด"></div>
+          </div>
+          <div class="sumline" id="rwBulkPreview" style="margin-top:6px;"></div>
+          <button class="btn w" id="btnRwBulk" style="margin-top:8px;">➕ รับเข้าหลายก้อนรวดเดียว</button>
         </details>
         <div class="rf">
           <div><label>ผู้ขาย</label><input id="rwSupplier"></div>
@@ -1132,33 +1136,30 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const n=($('rwSel').value==='__new__')?$('rwName').value.trim():$('rwSel').value;
     const _typed=($('rwLotNo')?$('rwLotNo').value.trim():'');
     const _kg=$('rwKg')?($('rwKg').value.trim()):'';
-    const _bales=($('rwBales')?$('rwBales').value.trim():'');
     const _next=n?CALC.nextFiberLot(S.fiberReceipts,n):'';
+    updateRwBulkPreview();
     if(!n){ $('rwLotPreview').innerHTML=''; return; }
     if(_typed){
       const _dup=S.fiberReceipts.some(r=>r.fiberName===n && String(r.lotNo)===String(+_typed));
       $('rwLotPreview').innerHTML='จะบันทึกเป็น <b style="color:var(--accent2)">เบอร์ '+esc(_typed)+'</b> · '+esc(n)+
-        (_kg?' · '+esc(_kg)+' กก.':'')+(_bales&&+_bales>1?' · <b style="color:var(--yellow)">'+esc(_bales)+' ก้อนรวมกัน</b>':' · 1 ก้อน')+
+        (_kg?' · '+esc(_kg)+' กก.':'')+' · 1 ก้อน'+
         (_dup?'<br><span class="bdg warn">เบอร์นี้มีอยู่แล้วในระบบ</span>':'');
     } else {
       $('rwLotPreview').innerHTML='<span class="bdg warn">ยังไม่ได้กรอกเบอร์ก้อน</span> ระบบจะตั้งเบอร์ให้เองเป็น <b>'+_next+
-        '</b> — <span style="color:var(--yellow)">ซึ่งไม่ใช่เลขที่เขียนบนก้อน</span>'+
-        (_bales&&+_bales>1?'<br><span class="bdg bad">คุณกรอกช่อง "จำนวนก้อน" ไว้ '+esc(_bales)+' — ถ้านั่นคือเลขที่เขียนบนก้อน ให้ย้ายมาช่อง ★ เบอร์ก้อน</span>':'');
+        '</b> — <span style="color:var(--yellow)">ซึ่งไม่ใช่เลขที่เขียนบนก้อน</span>';
     }
   }
   $('rwSel').onchange=function(){ const v=this.value,t=$('rwName'); if(v==='__new__'){t.style.display='block';t.value='';}else{t.style.display='none';t.value=v;} updateRwLotPreview(); };
   $('rwName').oninput=updateRwLotPreview;
-  ['rwLotNo','rwKg','rwBales'].forEach(id=>{ if($(id)) $(id).oninput=updateRwLotPreview; });
+  ['rwLotNo','rwKg'].forEach(id=>{ if($(id)) $(id).oninput=updateRwLotPreview; });
   $('btnRw').onclick=async()=>{
     const n=($('rwSel').value==='__new__'?$('rwName').value:$('rwSel').value).trim(), kg=+$('rwKg').value;
     if(!n||!kg){ toast('กรอกชื่อใยและน้ำหนัก'); return; }
     const customLot=$('rwLotNo').value.trim();
-    const _balesRaw=($('rwBales')?$('rwBales').value.trim():'');
     if(!customLot){
       const _auto=CALC.nextFiberLot(S.fiberReceipts,n);
       if(!await ask('ยังไม่ได้กรอกเบอร์ก้อน',
         'ระบบจะตั้งเบอร์ให้เองเป็น "เบอร์ '+_auto+'" ซึ่งไม่ใช่เลขที่เขียนบนก้อนจริง'+
-        (_balesRaw&&+_balesRaw>1 ? '\n\n⚠ คุณกรอกช่อง "จำนวนก้อน" ไว้ '+_balesRaw+' — ถ้านั่นคือเลขที่เขียนบนก้อน ให้กดยกเลิกแล้วย้ายมาช่อง ★ เบอร์ก้อน' : '')+
         '\n\nยืนยันจะให้ระบบออกเบอร์ '+_auto+' ให้หรือไม่?')) return;
     }
     const lotNo=customLot?+customLot:CALC.nextFiberLot(S.fiberReceipts,n);
@@ -1166,7 +1167,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       if(!await ask('เบอร์ก้อน '+lotNo+' ของ '+n+' มีอยู่แล้ว','ระบบจะมีก้อนเบอร์ '+lotNo+' ซ้ำกัน 2 ก้อน ทำให้ยอดคงเหลือดูสับสน\n\nถ้าเบอร์บนก้อนซ้ำกันจริง กดยืนยันได้เลย (ระบบแยกยอดให้ทีละก้อนอยู่แล้ว)\n\nยืนยันจะใช้เบอร์ซ้ำหรือไม่?')) return;
     }
     const dateVal=$('rwDate').value?$('rwDate').value+'T'+localISO().slice(11):localISO();
-    const baleCount=+$('rwBales').value||null;
+    const baleCount=null;   /* เลิกใช้ "จำนวนก้อนรวมกัน" แล้ว — รับหลายก้อนใช้ปุ่มรับรวดเดียวที่แยกเบอร์ให้ */
     const _w=[];
     if(kg>20000) _w.push('รับเข้า '+kg+' กก. ในครั้งเดียว ดูเยอะผิดปกติ');
     if(kg<1) _w.push('รับเข้าแค่ '+kg+' กก. ดูน้อยผิดปกติ');
@@ -1177,10 +1178,63 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if(!await confirmOdd(_w)) return;
     S.fiberReceipts.push({id:uid(),time:dateVal,fiberName:n,lotNo,kg,baleCount,supplier:$('rwSupplier').value.trim(),note:$('rwNote').value.trim()});
     await saveFiber();
-    ['rwSupplier','rwNote','rwKg','rwBales','rwLotNo'].forEach(id=>$(id).value='');
+    ['rwSupplier','rwNote','rwKg','rwLotNo','rwBulkN','rwBulkStart'].forEach(id=>{ if($(id)) $(id).value=''; });
     // ชื่อใยที่เลือกไว้ค้างต่อเนื่อง จนกว่าจะเปลี่ยนเอง (มักรับเข้าใยตัวเดิมหลายรอบติดกัน)
-    rFiber(); toast('บันทึกรับเข้าใยแล้ว — '+n+' เบอร์ '+lotNo+' · '+kg+' กก.'+(baleCount>1?' ('+baleCount+' ก้อนรวมกัน)':''));
+    rFiber(); toast('บันทึกรับเข้าใยแล้ว — '+n+' เบอร์ '+lotNo+' · '+kg+' กก.');
   };
+  /* ---------- รับหลายก้อนรวดเดียว — แยกเบอร์ให้ทีละก้อน ---------- */
+  function rwBulkPlan(){
+    const n=($('rwSel').value==='__new__'?$('rwName').value:$('rwSel').value).trim();
+    const kg=+$('rwKg').value||0;
+    const count=+($('rwBulkN')?$('rwBulkN').value:0)||0;
+    if(!n || !kg || count<2) return null;
+    const startRaw=($('rwBulkStart')?$('rwBulkStart').value.trim():'') || ($('rwLotNo')?$('rwLotNo').value.trim():'');
+    const start = startRaw!=='' ? +startRaw : CALC.nextFiberLot(S.fiberReceipts,n);
+    if(isNaN(start)||start<0) return null;
+    const nos=[]; for(let i=0;i<count;i++) nos.push(start+i);
+    const have=new Set(S.fiberReceipts.filter(r=>r.fiberName===n).map(r=>String(r.lotNo)));
+    const dup=nos.filter(x=>have.has(String(x)));
+    return { name:n, kg, count, start, nos, dup, total:r3(kg*count) };
+  }
+  function updateRwBulkPreview(){
+    const box=$('rwBulkPreview'); if(!box) return;
+    const p=rwBulkPlan();
+    if(!p){ box.innerHTML='<span style="color:var(--muted)">กรอกชื่อใย · น้ำหนักต่อก้อน · จำนวนก้อน (อย่างน้อย 2) แล้วจะสรุปให้ดูก่อนบันทึก</span>'; return; }
+    const show = p.nos.length<=12 ? p.nos.join(', ') : (p.nos.slice(0,5).join(', ')+' … '+p.nos.slice(-2).join(', '));
+    box.innerHTML='จะสร้าง <b style="color:var(--accent2)">'+p.count+' ก้อนแยกกัน</b> — เบอร์ <b>'+show+'</b>'+
+      '<br>ก้อนละ '+p.kg+' กก. · รวม <b>'+p.total+' กก.</b> · เบิกใช้ทีละก้อนได้ตามปกติ'+
+      (p.dup.length?'<br><span class="bdg warn">เบอร์ '+p.dup.join(', ')+' มีอยู่แล้ว</span> ระบบจะถามยืนยันก่อน':'');
+  }
+  ['rwBulkN','rwBulkStart'].forEach(id=>{ if($(id)) $(id).oninput=updateRwBulkPreview; });
+  if($('btnRwBulk')) $('btnRwBulk').onclick=async()=>{
+    const p=rwBulkPlan();
+    if(!p){ toast('กรอกชื่อใย น้ำหนักต่อก้อน และจำนวนก้อน (อย่างน้อย 2) ก่อน'); return; }
+    if(p.count>200){ toast('รับทีเดียวเกิน 200 ก้อนไม่ได้'); return; }
+    const _w=[];
+    if(p.kg>20000) _w.push('ก้อนละ '+p.kg+' กก. ดูเยอะผิดปกติ');
+    if(p.kg<1) _w.push('ก้อนละแค่ '+p.kg+' กก. ดูน้อยผิดปกติ');
+    const _ref=lastOf(S.fiberReceipts,r=>r.fiberName===p.name,'kg');
+    if(_ref>0 && (p.kg>_ref*10||p.kg<_ref/10))
+      _w.push('ครั้งก่อนใย "'+p.name+'" รับเข้า '+_ref+' กก./ก้อน แต่ครั้งนี้กรอก '+p.kg+' กก./ก้อน');
+    if(!await confirmOdd(_w)) return;
+    if(p.dup.length){
+      if(!await ask('มีเบอร์ที่ซ้ำกับของเดิม',
+        'เบอร์ '+p.dup.join(', ')+' ของ "'+p.name+'" มีอยู่แล้วในระบบ\n\nถ้าเบอร์บนก้อนซ้ำกันจริง กดยืนยันได้เลย (ระบบแยกยอดให้ทีละก้อน)\nถ้าไม่ใช่ ให้กดยกเลิกแล้วเปลี่ยน "เบอร์ก้อนเริ่มต้น"\n\nยืนยันจะสร้างทั้ง '+p.count+' ก้อนหรือไม่?')) return;
+    } else {
+      if(!await ask('รับเข้า '+p.count+' ก้อนรวดเดียว?',
+        'ใย: '+p.name+'\nเบอร์: '+p.nos[0]+' – '+p.nos[p.nos.length-1]+'\nก้อนละ: '+p.kg+' กก.\nรวม: '+p.total+' กก.\n\nระบบจะสร้างแยกเป็น '+p.count+' รายการ เบิกใช้ทีละก้อนได้')) return;
+    }
+    const dateVal=$('rwDate').value?$('rwDate').value+'T'+localISO().slice(11):localISO();
+    const sup=$('rwSupplier').value.trim(), note=$('rwNote').value.trim();
+    p.nos.forEach(no=>{
+      S.fiberReceipts.push({id:uid(),time:dateVal,fiberName:p.name,lotNo:no,kg:p.kg,baleCount:null,supplier:sup,note:note});
+    });
+    await saveFiber();
+    ['rwKg','rwLotNo','rwBulkN','rwBulkStart'].forEach(id=>{ if($(id)) $(id).value=''; });
+    rFiber(); updateRwLotPreview();
+    toast('รับเข้า '+p.count+' ก้อนแล้ว — '+p.name+' เบอร์ '+p.nos[0]+'–'+p.nos[p.nos.length-1]+' ก้อนละ '+p.kg+' กก. (รวม '+p.total+' กก.)');
+  };
+
   $('btnTh').onclick=async()=>{ const n=$('thSel').value; if(!n){toast('เลือกใยก่อน');return;} S.fiberTh[n]=+$('thKg').value||0; await saveFiber(); $('thKg').value=''; rFiber(); toast('ตั้งจุดเตือนแล้ว'); };
   let editingFiberId=null;
   async function editFiberReceipt(id){
