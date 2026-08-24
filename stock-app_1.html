@@ -610,7 +610,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     fiberLotStock(receipts, withdrawals){
       return (receipts||[]).map(r=>{
         const used = (withdrawals||[]).filter(w=>w.fiberName===r.fiberName && String(w.lot)===String(r.lotNo)).reduce((s,w)=>s+(+w.kg||0),0);
-        return { fiberName:r.fiberName, lotNo:r.lotNo, kg:r.kg, used:r3(used), remaining:r3(r.kg-used), time:r.time };
+        return { id:r.id, fiberName:r.fiberName, lotNo:r.lotNo, kg:r.kg, used:r3(used), remaining:r3(r.kg-used), time:r.time };
       });
     },
     // ---------- จำนวนก้อนใย (นับแยกจากน้ำหนัก — ติ๊กออกทีละก้อนเมื่อใช้) ----------
@@ -941,6 +941,24 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       ov.appendChild(bx); document.body.appendChild(ov); setTimeout(function(){inp.focus();inp.select();},30);
     });
   }
+  /* ---------- ตัวช่วยปรับยอด — กันยอดหายเพราะช่องว่าง และถามก่อนตั้งเป็น 0 ----------
+     เดิม: ลบตัวเลขจนว่างแล้วกดบันทึก ระบบอ่านเป็น 0 → ยอดหายเกลี้ยงเงียบๆ */
+  async function readAdjNumber(input, opts){
+    opts=opts||{};
+    if(input===null) return null;                       // กดยกเลิก
+    const raw=String(input).trim();
+    if(raw===''){ toast('ไม่ได้กรอกตัวเลข — ยกเลิกการปรับยอด ยอดเดิมยังอยู่ครบ'); return null; }
+    const v=+raw;
+    if(isNaN(v)){ toast('กรอกตัวเลขไม่ถูกต้อง — ยอดเดิมยังอยู่ครบ'); return null; }
+    if(!opts.allowNegative && v<0){ toast('ใส่ค่าติดลบไม่ได้ — ยอดเดิมยังอยู่ครบ'); return null; }
+    if(v===0 && (+opts.current||0)!==0){
+      if(!await ask('ปรับเป็น 0 — '+(opts.what||'ของชิ้นนี้')+' จะเหลือ 0',
+        'ตอนนี้ '+opts.current+' '+(opts.unit||'')+'\nจะเปลี่ยนเป็น 0 '+(opts.unit||'')+
+        '\n\nรายการยังอยู่ในระบบและประวัติยังอยู่ครบ แค่ยอดคงเหลือเป็น 0\n\nยืนยันหรือไม่?')) return null;
+    }
+    return v;
+  }
+
   /* ใช้แทน prompt() เดิม — รับข้อความรูปแบบเดียวกัน แล้วแยกหัวข้อ/รายละเอียดให้เอง */
   function askText2(msg, defVal){
     const parts=String(msg==null?'':msg).split('\n\n');
@@ -1021,9 +1039,25 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
           (bale.remaining>0?'<button class="ed" data-baletick="'+esc(l.fiberName)+'|'+l.lotNo+'">−1 ก้อน</button>':'')+
           (bale.used>0?'<button class="ed" data-baleundo="'+esc(l.fiberName)+'|'+l.lotNo+'">↩ +1</button>':'')):'—')+
         '</td><td>'+ymd(l.time)+
-        '</td><td><button class="ed" data-fladj="'+esc(l.fiberName)+'|'+l.lotNo+'">ปรับยอดคงเหลือ</button></td></tr>';
+        '</td><td><button class="ed" data-fladj="'+esc(l.id||'')+'">ปรับยอดคงเหลือ</button> '+
+        '<button class="x" data-fldel="'+esc(l.id||'')+'">✕</button></td></tr>';
       }).join('')
       :'<tr><td class="empty">'+(fiberLotFilter?'ใยนี้ยังไม่มีล็อต':'ยังไม่มีข้อมูล')+'</td></tr>';
+    $('tFiberLots').querySelectorAll('[data-fldel]').forEach(b=>b.onclick=async()=>{
+      const lot=lots.find(l=>l.id===b.dataset.fldel); if(!lot) return;
+      if(lot.used>0){
+        await info('ลบล็อตนี้ไม่ได้','ใย "'+lot.fiberName+'" ล็อต '+lot.lotNo+' ถูกเบิกไปใช้แล้ว '+lot.used+' กก.\n\nต้องไปลบรายการเบิกที่แอพผลิตก่อน แล้วค่อยกลับมาลบล็อตนี้');
+        return;
+      }
+      const nBale=(S.baleUsage||[]).filter(u=>u.fiberName===lot.fiberName && String(u.lotNo)===String(lot.lotNo)).length;
+      if(!await ask('ลบล็อตใยนี้ทิ้ง?',
+        'ใย: '+lot.fiberName+'\nล็อต: '+lot.lotNo+'\nน้ำหนักรับเข้า: '+lot.kg+' กก.\nวันที่รับ: '+thDate(lot.time)+
+        (nBale?'\n\nจะลบประวัติติ๊กก้อน '+nBale+' รายการที่ผูกกับล็อตนี้ไปด้วย':'')+
+        '\n\nยอดคงเหลือของใยนี้จะลดลง '+lot.kg+' กก. — การลบนี้กู้คืนไม่ได้')) return;
+      S.fiberReceipts=S.fiberReceipts.filter(x=>x.id!==lot.id);
+      S.baleUsage=(S.baleUsage||[]).filter(u=>!(u.fiberName===lot.fiberName && String(u.lotNo)===String(lot.lotNo)));
+      await saveFiber(); rFiber(); toast('ลบล็อต '+lot.lotNo+' ของ '+lot.fiberName+' แล้ว');
+    });
     $('tFiberLots').querySelectorAll('[data-baletick]').forEach(b=>b.onclick=async()=>{
       const [name,lotNo]=b.dataset.baletick.split('|');
       S.baleUsage.push({fiberName:name,lotNo:+lotNo,count:1,time:localISO()});
@@ -1035,12 +1069,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       await saveFiber(); rFiber(); toast('เอากลับมา 1 ก้อนแล้ว (แก้ติ๊กพลาด)');
     });
     $('tFiberLots').querySelectorAll('[data-fladj]').forEach(b=>b.onclick=async()=>{
-      const [name,lotNo]=b.dataset.fladj.split('|');
-      const lot=lots.find(l=>l.fiberName===name && String(l.lotNo)===lotNo); if(!lot) return;
+      const lot=lots.find(l=>l.id===b.dataset.fladj); if(!lot) return;
+      const name=lot.fiberName, lotNo=lot.lotNo;
       const input=await askText2('ปรับยอดคงเหลือของ "'+name+'" ล็อต '+lotNo+' เป็นเท่าไหร่ (กก.)\n\nตอนนี้เหลือ '+lot.remaining+' กก. (เบิกไปแล้ว '+lot.used+' กก.)', lot.remaining);
-      if(input===null) return;
-      const newRemaining=+input; if(isNaN(newRemaining)||newRemaining<0){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
-      const r=S.fiberReceipts.find(x=>x.fiberName===name && String(x.lotNo)===lotNo); if(!r) return;
+      const newRemaining=await readAdjNumber(input,{current:lot.remaining,unit:'กก.',what:'ใย "'+name+'" ล็อต '+lotNo});
+      if(newRemaining===null) return;
+      const r=S.fiberReceipts.find(x=>x.id===lot.id); if(!r) return;
       const _before=r.kg;
       r.kg=r3(lot.used+newRemaining);
       /* เก็บประวัติการปรับยอดไว้ ไม่ให้ยอดเดิมหายไปเงียบๆ */
@@ -1097,9 +1131,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const r=S.fiberReceipts.find(x=>x.id===id); if(!r) return;
     editingFiberId=id;
     const kg=await askText2('แก้ไขน้ำหนักรับเข้า (กก.) — ล็อต '+r.lotNo+' ของ '+r.fiberName, r.kg);
-    if(kg===null) return;
-    const v=+kg; if(!v){ toast('น้ำหนักไม่ถูกต้อง'); return; }
-    r.kg=v; saveFiber().then(()=>{ rFiber(); toast('แก้ไขแล้ว'); });
+    const v=await readAdjNumber(kg,{current:r.kg,unit:'กก.',what:'น้ำหนักรับเข้าล็อต '+r.lotNo});
+    if(v===null) return;
+    const _before=r.kg;
+    r.kg=v;
+    r.adjLog=(r.adjLog||[]); r.adjLog.push({ time:localISO(), from:_before, to:v, note:'แก้ไขน้ำหนักรับเข้า' });
+    if(r.adjLog.length>50) r.adjLog=r.adjLog.slice(-50);
+    saveFiber().then(()=>{ rFiber(); toast('แก้จาก '+_before+' → '+v+' กก. แล้ว'); });
   }
 
   /* ---------- 2. FABRIC ---------- */
@@ -1189,16 +1227,20 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if($('tCutBatchList')){
       let bl=batchStatus.slice();
       if(fabCardFilter) bl=bl.filter(x=>x.fabricType===fabCardFilter);
-      bl=bl.filter(x=>x.qtyCut>0).sort((a,b)=>String(b.time).localeCompare(String(a.time)));
+      /* ถุงทุกใบที่เคยลงไว้ต้องเห็นเสมอ — ปรับยอดเป็น 0 แล้วต้องไม่หายไปเฉยๆ */
+      bl=bl.sort((a,b)=>String(b.time).localeCompare(String(a.time)));
       $('tCutBatchList').innerHTML=bl.length
-        ? '<tr><th>ถุง #</th><th>ชนิดผ้า</th><th>ไซซ์ตัด</th><th>ไซซ์สำเร็จ</th><th>ตัดวันที่</th><th>ตัดได้</th><th>รับกลับ</th><th>เบิกไปแล้ว</th><th>พร้อมเบิก</th></tr>'+
-          bl.slice(0,200).map(b=>'<tr><td class="kn">#'+b.batchNo+'</td><td>'+esc(b.fabricType)+'</td>'+
+        ? '<tr><th>ถุง #</th><th>ชนิดผ้า</th><th>ไซซ์ตัด</th><th>ไซซ์สำเร็จ</th><th>ตัดวันที่</th><th>ตัดได้</th><th>รับกลับ</th><th>เบิกไปแล้ว</th><th>พร้อมเบิก</th><th></th></tr>'+
+          bl.slice(0,200).map(b=>{ const _bb=S.cutBatches.find(x=>x.id===b.batchId)||{};
+            const _adj=(_bb.adjLog||[]).length?' <span class="bdg warn" title="เคยปรับยอด">ปรับยอด</span>':''; return '<tr><td class="kn">#'+b.batchNo+_adj+'</td><td>'+esc(b.fabricType)+'</td>'+
             '<td>'+(b.cutKnown?esc(b.cutSize):'<span style="color:var(--dim)">— ของเก่า</span>')+'</td>'+
             '<td>'+(!b.cutKnown?esc(b.sizeFinished)
                    :(b.sizeFinished!==b.cutSize?'<b style="color:var(--accent2)">'+esc(b.sizeFinished)+'</b>'
                                                :'<span style="color:var(--dim)">เท่าไซซ์ตัด</span>'))+'</td>'+
             '<td class="kn">'+thDate(b.time)+'</td><td>'+b.qtyCut+'</td><td>'+b.returned+'</td><td>'+b.withdrawn+'</td>'+
-            '<td><b style="color:'+(b.readyBalance>0?'var(--accent2)':'var(--dim)')+'">'+b.readyBalance+'</b></td></tr>').join('')
+            '<td><b style="color:'+(b.readyBalance>0?'var(--accent2)':'var(--dim)')+'">'+b.readyBalance+'</b></td>'+
+            '<td><button class="ed" data-btadj="'+b.batchId+'">ปรับยอดคงเหลือ</button> '+
+            '<button class="x" data-btrm="'+b.batchId+'">✕</button></td></tr>'; }).join('')
         : '<tr><td class="empty">ยังไม่มีถุงที่ตัดไว้</td></tr>';
     }
 
@@ -1207,16 +1249,20 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         '</td><td>'+b.cutBalance+'</td><td>'+b.sewingBalance+'</td><td>'+b.returned+'</td><td>'+b.withdrawn+'</td><td><b style="color:'+(b.readyBalance>0?'var(--accent2)':'var(--dim)')+'">'+b.readyBalance+'</b></td>'+
         '<td><button class="ed" data-btadj="'+b.batchId+'">ปรับยอดคงเหลือ</button> <button class="x" data-btrm="'+b.batchId+'">✕</button></td></tr>').join('')
       :'<tr><td class="empty">ยังไม่มีการตัดผ้า</td></tr>';
-    $('tBatchStatus').querySelectorAll('[data-btadj]').forEach(btn=>btn.onclick=async()=>{
+    document.querySelectorAll('#tBatchStatus [data-btadj], #tCutBatchList [data-btadj]').forEach(btn=>btn.onclick=async()=>{
       const b=batchStatus.find(x=>x.batchId===btn.dataset.btadj); if(!b) return;
       const input=await askText2('ปรับ "จำนวนที่ตัดได้" ของถุง #'+b.batchNo+' ('+b.fabricType+' '+b.size+' · ตัด '+thDate(b.time)+') เป็นเท่าไหร่ (ชิ้น)\n\nตอนนี้ตัดไว้ '+b.qtyCut+' ชิ้น', b.qtyCut);
-      if(input===null) return;
-      const newQty=+input; if(isNaN(newQty)||newQty<0){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
+      const newQty=await readAdjNumber(input,{current:b.qtyCut,unit:'ชิ้น',what:'ถุง #'+b.batchNo+' ('+b.fabricType+')'});
+      if(newQty===null) return;
       const batch=S.cutBatches.find(x=>x.id===b.batchId); if(!batch) return;
+      const _before=batch.qtyCut;
       batch.qtyCut=newQty;
-      await saveFabric(); rFabric(); toast('ปรับยอดถุง #'+b.batchNo+' เป็น '+newQty+' ชิ้น แล้ว');
+      /* เก็บประวัติไว้ ยอดเดิมจะได้ไม่หายเงียบๆ */
+      batch.adjLog=(batch.adjLog||[]); batch.adjLog.push({ time:localISO(), from:_before, to:newQty });
+      if(batch.adjLog.length>50) batch.adjLog=batch.adjLog.slice(-50);
+      await saveFabric(); rFabric(); toast('ปรับยอดถุง #'+b.batchNo+' จาก '+_before+' → '+newQty+' ชิ้น แล้ว');
     });
-    $('tBatchStatus').querySelectorAll('[data-btrm]').forEach(btn=>btn.onclick=async()=>{
+    document.querySelectorAll('#tBatchStatus [data-btrm], #tCutBatchList [data-btrm]').forEach(btn=>btn.onclick=async()=>{
       const b=batchStatus.find(x=>x.batchId===btn.dataset.btrm); if(!b) return;
       if(b.withdrawn>0){ toast('ลบไม่ได้ — ถุงนี้ถูกเบิกไปผลิตแล้วบางส่วน ต้องไปลบรายการเบิกที่แอพผลิตก่อน'); return; }
       const linkedSent=S.sewSent.filter(s=>s.batchId===b.batchId).length;
@@ -1777,11 +1823,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       sackRows.slice().sort((a,b)=>b.time<a.time?-1:1).map(s=>{
         const mixed=(_wpbByName[s.kind+'|'+s.name]||[]).length>1;
         const wpb=(+s.weightPerBag||0);
-        return '<tr><td>#'+s.sackNo+'</td><td>'+(s.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+'</td><td>'+esc(s.name)+'</td><td>'+esc(s.size||'—')+
+        const _sr=S.sackReceipts.find(x=>x.id===s.sackId)||{};
+        const _adj=(_sr.adjLog||[]).length?' <span class="bdg warn" title="เคยปรับยอด">ปรับยอด</span>':'';
+        return '<tr><td>#'+s.sackNo+_adj+'</td><td>'+(s.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+'</td><td>'+esc(s.name)+'</td><td>'+esc(s.size||'—')+
         '</td><td class="kn"><b style="color:'+(wpb? (mixed?'var(--yellow)':'var(--accent2)') :'var(--dim)')+'">'+(wpb?wpb+' กก.':'—')+'</b></td>'+
         '<td class="kn">'+thDate(s.time)+'</td>'+
         '<td>'+s.sackWeightKg+' กก.</td><td>'+s.used+' กก.</td><td><b style="color:'+(s.remainingKg>0?'var(--accent2)':'var(--dim)')+'">'+s.remainingKg+' กก.</b></td><td>'+s.remainingPieces+
-        '</td><td><button class="ed" data-skadj="'+s.sackId+'">ปรับยอดคงเหลือ</button></td></tr>'; }).join('')
+        '</td><td><button class="ed" data-skadj="'+s.sackId+'">ปรับยอดคงเหลือ</button> '+
+        '<button class="x" data-skdel="'+s.sackId+'">✕</button></td></tr>'; }).join('')
       :'<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';
     ['zipCards','packCards'].forEach(id=>{
       const box=$(id); if(!box) return;
@@ -1793,11 +1842,29 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     $('tSackStatus').querySelectorAll('[data-skadj]').forEach(btn=>btn.onclick=async()=>{
       const s=sackStatus.find(x=>x.sackId===btn.dataset.skadj); if(!s) return;
       const input=await askText2('ปรับยอดคงเหลือของกระสอบ #'+s.sackNo+' ('+s.name+') เป็นเท่าไหร่ (กก.)\n\nตอนนี้เหลือ '+s.remainingKg+' กก. (เบิกไปแล้ว '+s.used+' กก.)', s.remainingKg);
-      if(input===null) return;
-      const newRemaining=+input; if(isNaN(newRemaining)||newRemaining<0){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
+      const newRemaining=await readAdjNumber(input,{current:s.remainingKg,unit:'กก.',what:'กระสอบ #'+s.sackNo+' ('+s.name+')'});
+      if(newRemaining===null) return;
       const r=S.sackReceipts.find(x=>x.id===s.sackId); if(!r) return;
+      const _before=r.sackWeightKg;
       r.sackWeightKg=r3(s.used+newRemaining);
-      await saveBag(); rBag(); toast('ปรับยอดกระสอบ #'+s.sackNo+' เป็น '+newRemaining+' กก. แล้ว');
+      r.adjLog=(r.adjLog||[]); r.adjLog.push({ time:localISO(), from:_before, to:r.sackWeightKg, remainingTo:newRemaining });
+      if(r.adjLog.length>50) r.adjLog=r.adjLog.slice(-50);
+      await saveBag(); rBag(); toast('ปรับยอดกระสอบ #'+s.sackNo+' เหลือ '+newRemaining+' กก. แล้ว (เดิมกระสอบ '+_before+' กก.)');
+    });
+
+    $('tSackStatus').querySelectorAll('[data-skdel]').forEach(btn=>btn.onclick=async()=>{
+      const s=sackStatus.find(x=>x.sackId===btn.dataset.skdel); if(!s) return;
+      if(s.used>0){
+        await info('ลบกระสอบนี้ไม่ได้','กระสอบ #'+s.sackNo+' ('+s.name+') ถูกเบิกไปใช้แล้ว '+s.used+' กก.\n\nต้องไปลบรายการเบิกที่แอพผลิตก่อน แล้วค่อยกลับมาลบกระสอบนี้');
+        return;
+      }
+      if(!await ask('ลบกระสอบนี้ทิ้ง?',
+        (s.kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+': '+s.name+'\nกระสอบ: #'+s.sackNo+
+        (s.size?'\nไซซ์: '+s.size:'')+'\nน้ำหนักกระสอบ: '+s.sackWeightKg+' กก.'+
+        (s.weightPerBag?' (น้ำหนัก/ใบ '+s.weightPerBag+' กก.)':'')+'\nวันที่รับ: '+thDate(s.time)+
+        '\n\nยอดถุงชื่อนี้จะลดลง '+s.sackWeightKg+' กก. — การลบนี้กู้คืนไม่ได้')) return;
+      S.sackReceipts=S.sackReceipts.filter(x=>x.id!==s.sackId);
+      await saveBag(); rBag(); toast('ลบกระสอบ #'+s.sackNo+' ('+s.name+') แล้ว');
     });
 
     $('tBagHist').innerHTML=S.sackReceipts.length?'<tr><th>เวลา</th><th>ประเภท</th><th>ชื่อ</th><th>กระสอบ #</th><th>น้ำหนัก</th><th></th></tr>'+
@@ -1920,8 +1987,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     $('finCards').querySelectorAll('[data-finadj]').forEach(btn=>btn.onclick=async()=>{
       const s=stock.find(x=>x.orderId===btn.dataset.finadj); if(!s) return;
       const input=await askText2('ปรับยอดสต๊อกสินค้าสำเร็จรูปของ "'+orderLabel(s.orderId)+'" เป็นเท่าไหร่ (แพ็ค)\n\nตอนนี้เหลือ '+s.stock+' แพ็ค (ผลิตได้ '+s.produced+' - ส่งออกแล้ว '+s.shipped+')', s.stock);
-      if(input===null) return;
-      const target=+input; if(isNaN(target)){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
+      const target=await readAdjNumber(input,{current:s.stock,unit:'แพ็ค',what:'สินค้า "'+orderLabel(s.orderId)+'"'});
+      if(target===null) return;
       const delta=r2(target-s.stock);
       if(delta===0){ toast('ยอดเท่าเดิม ไม่ต้องปรับ'); return; }
       S.finAdjustments.push({ id:uid(), time:localISO(), orderId:s.orderId, delta, note:'ปรับยอดให้ตรงกับที่นับจริง' });
@@ -1930,8 +1997,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     $('finCards').querySelectorAll('[data-finfreeadj]').forEach(btn=>btn.onclick=async()=>{
       const s=freeStock.find(x=>x.freeLabel===btn.dataset.finfreeadj); if(!s) return;
       const input=await askText2('ปรับยอดสต๊อกของ "'+s.freeLabel+'" เป็นเท่าไหร่ (แพ็ค)\n\nตอนนี้เหลือ '+s.stock+' แพ็ค', s.stock);
-      if(input===null) return;
-      const target=+input; if(isNaN(target)){ toast('กรอกตัวเลขไม่ถูกต้อง'); return; }
+      const target=await readAdjNumber(input,{current:s.stock,unit:'แพ็ค',what:'สินค้า "'+s.freeLabel+'"'});
+      if(target===null) return;
       const delta=r2(target-s.stock);
       if(delta===0){ toast('ยอดเท่าเดิม ไม่ต้องปรับ'); return; }
       S.finAdjustments.push({ id:uid(), time:localISO(), orderId:null, freeLabel:s.freeLabel, delta, note:'ปรับยอดให้ตรงกับที่นับจริง' });
