@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ต้นทุน">
+<meta name="theme-color" content="#ff8a3d">
+<title>ต้นทุน &amp; ตีราคา — วินโพลีดีไซน์</title>
+</head>
+<body>
+<style>
+  #sk, #sk * { box-sizing: border-box; }
+  #sk {
+    --bg:#e6f4ea; --panel:#1a222c; --panel2:#212b37; --border:#2b3645;
+    --accent:#ff8a3d; --accent2:#ffb27a; --text:#f2ede3; --dim:#ffffff;
+    --green:#3fb27f; --red:#e5595f; --yellow:#f0b429; --blue:#5b9bd5;
+    font-family:'Sarabun',sans-serif; background:var(--bg); color:var(--text);
+    min-height:100vh; padding-bottom:78px; position:relative; -webkit-tap-highlight-color:transparent;
+  }
+  #sk h1,#sk h2,#sk h3,#sk .kn { font-family:'Kanit',sans-serif; }
+  #sk .topbar { padding:14px 16px 12px; border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#141b23,#10151c); position:sticky; top:0; z-index:20; }
+  #sk .topbar h1 { font-size:17px; font-weight:600; margin:0 0 2px; display:flex; align-items:center; gap:8px; }
+  #sk .dotled { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); }
+  #sk .sub { font-size:13px; color:#ffffff; font-weight:500; }
+  #sk .savechip { margin-top:7px; font-size:11.5px; padding:5px 10px; border-radius:8px;
+    font-family:'Kanit',sans-serif; display:inline-block; cursor:default; }
+  #sk .savechip.ok { background:#163022; color:var(--green); }
+  #sk .savechip.saving { background:#232e3b; color:#ffffff; }
+  #sk .savechip.bad { background:#3a1c1e; color:var(--red); border:1px solid #5c2a2c; cursor:pointer; }
+  #sk .content { padding:14px; max-width:980px; margin:0 auto; }
+  #sk .panel { display:none; }
+  #sk .panel.show { display:block; }
+  #sk .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:11px; }
+  #sk .card h3 { font-size:13px; color:#ffffff; font-weight:500; margin:0 0 9px; text-transform:uppercase; letter-spacing:.5px; }
+  #sk input,#sk select { width:100%; background:var(--panel2); border:1px solid var(--border);
+    border-radius:8px; padding:9px 10px; color:var(--text); font-family:'Sarabun',sans-serif; font-size:14px; margin-top:4px; }
+  #sk label { font-size:12px; color:#ffffff; display:block; margin-top:9px; }
+  /* มือถือ: ปุ่มและช่องกรอกต้องกดถนัด แม้ใส่ถุงมือหรือมือเปื้อน (มาตรฐาน 44px) */
+  @media (max-width:640px){
+    #sk input,#sk select,#sk textarea { min-height:44px; padding:11px 12px; font-size:16px; }
+    #sk .chkrow input[type="checkbox"], #sk input[type="checkbox"] { min-height:0; width:22px; height:22px; }
+    #sk button.btn { min-height:44px; }
+    #sk button.btn.sm { min-height:40px; }
+    #sk .nb { min-height:52px; }
+    #sk .x, #sk .ed { min-height:40px; min-width:40px; padding:8px 10px; font-size:15px; }
+  }
+
+  #sk button.btn { background:var(--accent); color:#201305; border:none; border-radius:9px; padding:10px 15px;
+    font-family:'Kanit',sans-serif; font-weight:500; font-size:14px; cursor:pointer; margin-top:11px; }
+  #sk button.btn.sec { background:var(--panel2); color:var(--text); border:1px solid var(--border); }
+  #sk button.btn.dg { background:#3a1c1e; color:var(--red); border:1px solid #5c2a2c; }
+  #sk button.btn.blue { background:var(--blue); color:#0a1f33; }
+  #sk button.btn.sm { padding:6px 10px; font-size:12.5px; margin-top:0; }
+  #sk button.btn.w { width:100%; }
+  #sk .rf { display:flex; gap:9px; flex-wrap:wrap; }
+  #sk .rf > div { flex:1; min-width:120px; }
+  #sk table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  #sk th { text-align:left; color:#ffffff; font-weight:500; padding:7px 8px; border-bottom:1px solid var(--border);
+    white-space:nowrap; font-family:'Kanit',sans-serif; }
+  #sk td { padding:7px 8px; border-bottom:1px solid #1f2833; white-space:nowrap; }
+  #sk .scr { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  #sk .bdg { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-family:'Kanit',sans-serif; }
+  #sk .bdg.ok { background:#163022; color:var(--green); }
+  #sk .bdg.warn { background:#3a2a0f; color:var(--yellow); }
+  #sk .bdg.bad { background:#3a1c1e; color:var(--red); }
+  #sk .sg { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  #sk .stat { background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:11px; }
+  #sk .stat .v { font-size:21px; font-family:'Kanit',sans-serif; color:var(--accent2); }
+  #sk .stat .l { font-size:11px; color:#ffffff; margin-top:2px; }
+  #sk .nav { position:fixed; bottom:0; left:0; right:0; background:#141b23; border-top:1px solid var(--border); display:flex; z-index:30; overflow-x:auto; }
+  #sk .nb { flex:1; background:none; border:none; color:#ffffff; padding:8px 2px 7px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; font-family:'Sarabun',sans-serif; min-width:64px; }
+  #sk .nb .ic { font-size:17px; }
+  #sk .nb.on { color:var(--accent); }
+  #sk .empty { color:#ffffff; font-size:12.5px; text-align:center; padding:16px 0; }
+  #sk .sumline { font-size:12.5px; color:#ffffff; margin-top:8px; }
+  #sk .toast { position:fixed; bottom:88px; left:50%; transform:translateX(-50%) translateY(12px);
+    background:#243040; border:1px solid var(--accent); color:var(--text); padding:10px 16px; border-radius:10px;
+    font-size:13px; font-family:'Kanit',sans-serif; z-index:200; opacity:0; transition:.22s; pointer-events:none;
+    max-width:90vw; text-align:center; }
+  #sk .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #sk .scard { background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:8px; }
+  #sk .scard .nm { font-family:'Kanit',sans-serif; font-size:15px; }
+  #sk .scard .n { font-size:24px; font-family:'Kanit',sans-serif; color:var(--accent2); margin-top:4px; }
+  #sk .scard .l { font-size:11px; color:#ffffff; }
+  #sk .lowstock { border-color:var(--red); box-shadow:0 0 0 1px var(--red) inset; }
+  #sk .frow { display:flex; gap:6px; margin-top:6px; align-items:center; }
+  #sk .frow input { margin-top:0; }
+  #sk .x { background:none; border:none; color:var(--red); cursor:pointer; font-size:15px; padding:2px 6px; }
+  #sk .ed { background:none; border:none; color:var(--blue); cursor:pointer; font-size:12px; padding:2px 6px; }
+  #sk .cartrow { background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px; }
+  #sk .chkrow { display:inline-flex; align-items:center; gap:4px; background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:5px 9px; margin:3px; font-size:12.5px; }
+  #sk .chkrow input { width:auto; margin:0; }
+  #sk .printbill { display:none; }
+  @media print {
+    body * { visibility:hidden; }
+    #sk .printbill, #sk .printbill * { visibility:visible; }
+    #sk .printbill { display:block; position:absolute; top:0; left:0; width:100%; color:#000; background:#fff; padding:20px; }
+    #sk .printbill table { border-collapse:collapse; width:100%; }
+    #sk .printbill th, #sk .printbill td { border:1px solid #333; padding:5px 8px; font-size:12.5px; }
+    #sk .billsheet { margin-bottom:20px; }
+    #sk .billhead { display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:8px; }
+    #sk .billtitle { font-size:18px; font-weight:700; }
+    #sk .billco { font-size:14px; font-weight:600; }
+    #sk .billdate { font-size:13px; }
+    #sk .billmeta { display:flex; flex-wrap:wrap; gap:14px; font-size:13px; margin-bottom:10px; }
+    #sk .billgrid th { background:#eee; }
+    #sk .billsum td { background:#f5f5f5; font-weight:600; text-align:left; }
+    #sk .billtotal { margin-top:8px; font-size:14px; text-align:right; }
+  }
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+
+<div id="sk">
+  <div class="topbar">
+    <h1><span class="dotled"></span> ต้นทุน &amp; ตีราคา</h1>
+    <div class="sub" id="clock" style="color:#ffffff;">—</div>
+    <div class="savechip ok" id="saveState">บันทึกแล้ว ✓</div>
+    <div class="sumline" style="margin-top:6px;">ดึงยอดที่เบิกจริงจากแอพสต๊อก+แอพผลิต มาคูณราคาที่ใส่ไว้ในแอพนี้ — ไม่แตะข้อมูล 2 แอพเดิม</div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══════════ 1. ราคาของ ══════════ -->
+    <div class="panel" id="p-price">
+      <div class="card">
+        <h3>ยังไม่ได้ใส่ราคา</h3>
+        <div class="sumline" id="priceTodo"></div>
+      </div>
+      <div class="card">
+        <h3>ราคาใย (บาท/กก.)</h3>
+        <div class="sumline">ใส่ราคามาตรฐานของใยแต่ละชื่อไว้ก่อน ถ้าล็อตไหนซื้อมาไม่เท่ากัน กดเปิด "แยกราคาทีละก้อน" แล้วใส่เฉพาะก้อนนั้น</div>
+        <div id="prFiber"></div>
+      </div>
+      <div class="card">
+        <h3>ราคาผ้า (บาท/ม้วน)</h3>
+        <div class="sumline">ระบบจะหารด้วยจำนวนชิ้นที่ตัดได้จากม้วนนั้น เป็นค่าผ้าต่อชิ้นให้เอง</div>
+        <div id="prFabric"></div>
+      </div>
+      <div class="card">
+        <h3>ราคาถุง (บาท/กระสอบ)</h3>
+        <div class="sumline">หารด้วยจำนวนใบต่อกระสอบ (คิดจากน้ำหนักกระสอบ ÷ น้ำหนักต่อใบ ที่ลงไว้ในแอพสต๊อก)</div>
+        <div id="prBag"></div>
+      </div>
+      <div class="card">
+        <h3>ราคาแก๊ส (บาท/ถัง)</h3>
+        <input id="prGas" type="number" inputmode="decimal" step="0.01" placeholder="เช่น 420">
+      </div>
+      <button class="btn w" id="btnSavePrice">บันทึกราคา</button>
+    </div>
+
+    <!-- ══════════ 2. ตั้งค่า ══════════ -->
+    <div class="panel" id="p-set">
+      <div class="card">
+        <h3>ค่าจ้างเย็บ (ส่งช่างนอก)</h3>
+        <label>ค่าเย็บมาตรฐาน (บาท/ชิ้น)</label>
+        <input id="stSew" type="number" inputmode="decimal" step="0.01" placeholder="เช่น 4.50">
+        <div class="sumline">ถ้าบางไซซ์คิดไม่เท่ากัน ตั้งแยกได้ด้านล่าง</div>
+        <div id="sewSizeRows"></div>
+        <div class="rf" style="margin-top:8px;">
+          <div><input id="sewSizeName" placeholder="ไซซ์ เช่น 17.5x26"></div>
+          <div><input id="sewSizeBaht" type="number" inputmode="decimal" step="0.01" placeholder="บาท/ชิ้น"></div>
+        </div>
+        <button class="btn sec sm" id="btnAddSewSize" style="margin-top:8px;">➕ เพิ่มค่าเย็บรายไซซ์</button>
+      </div>
+
+      <div class="card">
+        <h3>ค่าแรงคนงานในโรง</h3>
+        <div class="sumline">กรอกได้ทั้ง 2 แบบ ระบบบวกรวมให้ — ใครจ่ายรายวันใส่ช่องซ้าย ใครจ่ายรายชิ้นใส่ช่องล่าง</div>
+        <div class="rf">
+          <div><label>ค่าแรงรายวัน รวมทั้งโรง (บาท/วัน)</label><input id="stLaborDay" type="number" inputmode="decimal" step="1" placeholder="เช่น 3600"></div>
+          <div><label>ทำงานวันละกี่ชั่วโมง</label><input id="stLaborHrs" type="number" inputmode="decimal" step="0.5" placeholder="8"></div>
+        </div>
+        <label>ค่าแรงรายชิ้น (บาท/ชิ้น) — เฉพาะคนที่จ่ายตามจำนวนที่ทำได้</label>
+        <input id="stLaborPc" type="number" inputmode="decimal" step="0.01" placeholder="เช่น 1.20">
+        <div class="sumline" id="laborPreview"></div>
+      </div>
+
+      <div class="card">
+        <h3>ค่าไฟ / ค่าส่ง</h3>
+        <div class="rf">
+          <div><label>ค่าไฟเดินเครื่อง (บาท/ชั่วโมง)</label><input id="stElec" type="number" inputmode="decimal" step="0.01" placeholder="เช่น 85"></div>
+          <div><label>ค่าส่ง (บาท/แพ็ค)</label><input id="stShip" type="number" inputmode="decimal" step="0.01" placeholder="เช่น 12"></div>
+        </div>
+        <div class="sumline">ค่าแก๊สไม่ต้องตั้งตรงนี้ — ระบบนับถังที่เปลี่ยนระหว่างงานจากแอพผลิต แล้วคูณราคาถังในหน้า "ราคาของ"</div>
+      </div>
+
+      <div class="card">
+        <h3>ค่าใช้จ่ายคงที่ต่อเดือน</h3>
+        <div class="sumline">ดอกเบี้ย · เงินเดือนประจำ · ค่าเช่า · ค่าไฟฐาน — ระบบจะหารด้วย<b>ชั่วโมงเดินเครื่อง</b>แล้วเฉลี่ยลงแต่ละงาน</div>
+        <div id="fixedRows"></div>
+        <div class="rf" style="margin-top:8px;">
+          <div><input id="fixName" placeholder="ชื่อรายการ เช่น ดอกเบี้ย"></div>
+          <div><input id="fixBaht" type="number" inputmode="decimal" step="1" placeholder="บาท/เดือน"></div>
+        </div>
+        <button class="btn sec sm" id="btnAddFixed" style="margin-top:8px;">➕ เพิ่มรายการ</button>
+        <label style="margin-top:12px;">ชั่วโมงเดินเครื่องต่อเดือน — เว้นว่าง = คำนวณจากยอดผลิตจริง</label>
+        <input id="stHours" type="number" inputmode="decimal" step="1" placeholder="เว้นว่าง = ให้ระบบคำนวณเอง">
+        <div class="sumline" id="fixedPreview"></div>
+      </div>
+
+      <div class="card">
+        <h3>กำไรที่ต้องการ</h3>
+        <div class="rf">
+          <div><label>บวกกำไร (%)</label><input id="stMargin" type="number" inputmode="decimal" step="1" placeholder="20"></div>
+          <div><label>VAT (%) — ไม่คิดใส่ 0</label><input id="stVat" type="number" inputmode="decimal" step="1" placeholder="0"></div>
+        </div>
+      </div>
+
+      <button class="btn w" id="btnSaveSet">บันทึกการตั้งค่า</button>
+    </div>
+
+    <!-- ══════════ 3. ต้นทุนจริง ══════════ -->
+    <div class="panel" id="p-job">
+      <div class="card">
+        <h3>เลือกงานที่จะดูต้นทุน</h3>
+        <select id="jobSel"></select>
+        <div class="sumline" id="jobMeta"></div>
+      </div>
+      <div class="card" id="jobWarnCard" style="display:none;">
+        <h3>⚠ ยังคิดไม่ครบ</h3>
+        <div class="sumline" id="jobWarn"></div>
+      </div>
+      <div class="card"><h3>วันเวลาที่ผลิตจริง</h3>
+        <div class="sumline" id="jobSpan"></div>
+        <div class="scr" style="margin-top:8px;"><table id="tJobDays"></table></div>
+      </div>
+      <div class="card"><h3>ต้นทุนต่อหน่วย</h3><div class="sg" id="jobStats"></div></div>
+      <div class="card"><h3>แยกรายการ</h3><div class="scr"><table id="tJobBreak"></table></div></div>
+      <div class="card"><h3>ที่มาของตัวเลข</h3><div class="scr"><table id="tJobDetail"></table></div></div>
+    </div>
+
+    <!-- ══════════ 4. ตีราคา ══════════ -->
+    <div class="panel" id="p-quote">
+      <div class="card">
+        <h3>ตีราคางานใหม่</h3>
+        <div class="rf">
+          <div><label>ลูกค้า</label><input id="qCust" placeholder="เช่น โยพานิช"></div>
+          <div><label>ชื่องาน</label><input id="qCode" placeholder="เช่น หมอนขาว 17.5x26"></div>
+        </div>
+        <div class="rf">
+          <div><label>ชนิดสินค้า</label><select id="qType"><option value="หมอน">หมอน (มีปลอกผ้า)</option><option value="ใย">ใยแผ่น (ไม่มีปลอก)</option></select></div>
+          <div><label>จำนวนที่สั่ง (ชิ้น)</label><input id="qPieces" type="number" inputmode="numeric" placeholder="เช่น 200"></div>
+        </div>
+        <div class="rf">
+          <div><label>ชิ้นต่อแพ็ค</label><input id="qPerPack" type="number" inputmode="numeric" placeholder="เช่น 10"></div>
+          <div><label>ใย (กก./ชิ้น)</label><input id="qFiberKg" type="number" inputmode="decimal" step="0.001" placeholder="เช่น 0.88"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>วัตถุดิบ</h3>
+        <label>ใยที่ใช้</label><select id="qFiber"></select>
+        <div class="sumline" id="qFiberPrice"></div>
+        <div id="qFabRow">
+          <label>ผ้าที่ใช้</label><select id="qFabric"></select>
+          <label>ค่าผ้า (บาท/ชิ้น) — เว้นว่าง = คิดจากม้วนที่เคยตัด</label>
+          <input id="qFabBaht" type="number" inputmode="decimal" step="0.01" placeholder="">
+          <div class="sumline" id="qFabPrice"></div>
+        </div>
+        <div class="rf">
+          <div><label>ถุงซิล</label><select id="qZip"></select></div>
+          <div><label>กี่ใบต่อแพ็ค</label><input id="qZipN" type="number" inputmode="numeric" placeholder="เช่น 10"></div>
+        </div>
+        <div class="rf">
+          <div><label>ถุงแพ็ค</label><select id="qPack"></select></div>
+          <div><label>กี่ใบต่อแพ็ค</label><input id="qPackN" type="number" inputmode="numeric" placeholder="เช่น 1"></div>
+        </div>
+        <div class="sumline" id="qBagPrice"></div>
+      </div>
+
+      <div class="card">
+        <h3>ค่าแรง / เวลา</h3>
+        <div class="rf">
+          <div><label>ค่าเย็บ (บาท/ชิ้น)</label><input id="qSew" type="number" inputmode="decimal" step="0.01" placeholder="ว่าง = ใช้ค่าที่ตั้งไว้"></div>
+          <div><label>คาดว่าใช้เวลา (ชั่วโมง)</label><input id="qHours" type="number" inputmode="decimal" step="0.5" placeholder="ว่าง = คิดจากความเร็วจริง"></div>
+        </div>
+        <div class="sumline" id="qSpeed"></div>
+        <label>บวกกำไร (%) — ว่าง = ใช้ค่าที่ตั้งไว้</label>
+        <input id="qMargin" type="number" inputmode="decimal" step="1" placeholder="">
+      </div>
+
+      <div class="card"><h3>ผลการตีราคา</h3><div class="sg" id="qStats"></div>
+        <div class="scr" style="margin-top:10px;"><table id="tQuoteBreak"></table></div>
+        <div class="sumline" id="qNote"></div>
+      </div>
+      <button class="btn w" id="btnSaveQuote">💾 เก็บใบตีราคานี้ไว้</button>
+
+      <div class="card"><h3>ใบตีราคาที่เก็บไว้</h3><div class="scr"><table id="tQuotes"></table></div></div>
+    </div>
+
+    <!-- ══════════ 5. สรุป ══════════ -->
+    <div class="panel" id="p-sum">
+      <div class="card"><h3>ภาพรวม</h3><div class="sg" id="sumStats"></div></div>
+      <div class="card"><h3>ต้นทุนต่อชิ้น แยกตามงาน</h3><div class="scr"><table id="tSumJobs"></table></div></div>
+      <div class="card"><h3>ตีไว้ vs ทำจริง</h3><div class="scr"><table id="tCompare"></table></div>
+        <div class="sumline" id="cmpNote"></div></div>
+      <div class="card"><h3>กำลังการผลิตจริง</h3><div class="scr"><table id="tCapacity"></table></div>
+        <div class="sumline" id="capNote"></div></div>
+      <div class="card"><h3>ราคาวัตถุดิบที่ใช้คิด</h3><div class="scr"><table id="tPrices"></table></div></div>
+    </div>
+
+  </div>
+
+  <div class="nav">
+    <button class="nb on" data-p="price"><span class="ic">💰</span>ราคาของ</button>
+    <button class="nb" data-p="set"><span class="ic">⚙️</span>ตั้งค่า</button>
+    <button class="nb" data-p="job"><span class="ic">🧾</span>ต้นทุนจริง</button>
+    <button class="nb" data-p="quote"><span class="ic">🏷️</span>ตีราคา</button>
+    <button class="nb" data-p="sum"><span class="ic">📊</span>สรุป</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ═══════════════ WPD PATCH 2569-08-20 (ส่วนเสริม ไม่ได้แก้ของเดิม) ═══════════════ */
+/* ก. <select> ต้องจำค่าที่เลือกไว้ ถึงจะสร้าง option ใหม่กี่รอบก็ตาม */
+(function(){try{
+  var d=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');
+  if(!d||!d.set) return;
+  Object.defineProperty(HTMLSelectElement.prototype,'innerHTML',{configurable:true,
+    get:function(){return d.get.call(this);},
+    set:function(v){var prev=this.value; d.set.call(this,v);
+      if(prev!==''&&prev!=null){for(var i=0;i<this.options.length;i++){if(this.options[i].value===prev){this.value=prev;break;}}}
+    }});
+}catch(e){}})();
+/* ข. ป้าย "กำลังบันทึก…" + กันกดปุ่มซ้ำจนบันทึกซ้อน */
+(function(){try{
+  var inflight=0, badge=null, guarded=null;
+  function ui(){
+    if(!badge){badge=document.createElement('div');
+      badge.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:99999;background:#ff8a3d;color:#12181f;font:600 14px Sarabun,sans-serif;padding:9px 20px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.45);display:none';
+      badge.textContent='กำลังบันทึก…';document.body.appendChild(badge);}
+    badge.style.display=inflight>0?'block':'none';
+    if(guarded){ if(inflight>0){guarded.setAttribute('data-busy','1');guarded.style.opacity='0.5';guarded.style.pointerEvents='none';}
+      else {guarded.removeAttribute('data-busy');guarded.style.opacity='';guarded.style.pointerEvents='';guarded=null;} }
+  }
+  document.addEventListener('click',function(ev){
+    var b=ev.target&&ev.target.closest?ev.target.closest('button'):null;
+    if(!b) return;
+    if(b.getAttribute('data-busy')==='1'){ev.stopImmediatePropagation();ev.preventDefault();return;}
+    if(b.getAttribute('data-noguard')==='1') return;
+    guarded=b;
+  },true);
+  var of=window.fetch;
+  window.fetch=function(){
+    var m=(arguments[1]&&arguments[1].method||'GET').toUpperCase();
+    if(m==='GET'||m==='HEAD') return of.apply(this,arguments);
+    inflight++; ui();
+    return of.apply(this,arguments).finally(function(){inflight--; if(inflight<0)inflight=0; ui();});
+  };
+}catch(e){}})();
+/* ค. กันกรอกปีผิดในช่องวันที่ (เช่น 0069 หรือเผลอกรอก พ.ศ.) */
+(function(){try{
+  function yearOf(v){ var m=String(v||'').match(/^(\d{4})-/); return m?+m[1]:null; }
+  document.addEventListener('change',function(ev){
+    var el=ev.target; if(!el||el.tagName!=='INPUT') return;
+    if(el.type!=='date'&&el.type!=='datetime-local') return;
+    var y=yearOf(el.value); if(y==null||(y>=2015&&y<=2100)) return;
+    var fix=null;
+    if(y>=2558&&y<=2643) fix=String(y-543)+String(el.value).slice(4);
+    var msg='ปี '+y+' ไม่น่าถูกต้อง'+(fix?('\n\nระบบเปลี่ยนเป็น ค.ศ. '+(y-543)+' ให้แล้ว'):('\n\nช่องนี้ใช้ปี ค.ศ. เช่น '+(new Date().getFullYear())));
+    el.value = fix ? fix : '';
+    try{
+      var t=document.getElementById('__wpdDateWarn');
+      if(!t){ t=document.createElement('div'); t.id='__wpdDateWarn';
+        t.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:110px;z-index:99999;background:#e5595f;color:#fff;font:600 14px/1.5 Sarabun,sans-serif;padding:10px 16px;border-radius:12px;max-width:88%;white-space:pre-line;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.45)';
+        document.body.appendChild(t); }
+      t.textContent=msg; t.style.display='block';
+      clearTimeout(t.__tm); t.__tm=setTimeout(function(){ t.style.display='none'; },5000);
+    }catch(e){}
+  },true);
+}catch(e){}})();
+</script>
+<script>
+/* ==========================================================================
+   SUPABASE STORAGE SHIM — ใช้โปรเจกต์เดียวกับระบบผลิต ข้อมูลจึงเชื่อมกันอัตโนมัติ
+   ========================================================================== */
+const SUPABASE_URL = 'https://tekhjdnbfncfvpwejlni.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRla2hqZG5iZm5jZnZwd2VqbG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NjgzNDIsImV4cCI6MjEwMTU0NDM0Mn0.bOO7i_NyD-noFzyPjs22R0M2wGlUznViV-_YjOTqbak';
+(function setupSupabaseStorage(){
+  const needsSetup = SUPABASE_URL.includes('YOUR-PROJECT-REF') || SUPABASE_ANON_KEY.includes('YOUR-ANON-PUBLIC-KEY');
+  const base = SUPABASE_URL.replace(/\/$/,'') + '/rest/v1/kv_store';
+  const headers = () => ({ 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' });
+  async function get(key){
+    const r = await fetch(base + '?id=eq.' + encodeURIComponent(key) + '&select=value', { headers: headers() });
+    if (!r.ok) throw new Error('Supabase get failed: HTTP ' + r.status + ' ' + (await r.text()).slice(0,150));
+    const rows = await r.json();
+    if (!rows.length) return null;
+    return { key: key, value: rows[0].value, shared: true };
+  }
+  async function set(key, value){
+    const r = await fetch(base, { method: 'POST',
+      headers: Object.assign(headers(), { 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ id: key, value: value, shared: true, updated_at: new Date().toISOString() }]) });
+    if (!r.ok) throw new Error('Supabase set failed: HTTP ' + r.status + ' ' + (await r.text()).slice(0,150));
+    return { key: key, value: value, shared: true };
+  }
+  if (needsSetup){
+    window.storage = null;
+    document.addEventListener('DOMContentLoaded', () => {
+      const b = document.createElement('div');
+      b.style.cssText='position:fixed;inset:0;background:#10151c;color:#f2ede3;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;font-family:sans-serif;text-align:center;';
+      b.innerHTML='<div style="max-width:420px;"><div style="font-size:40px;">⚠️</div><h2>ยังไม่ได้ตั้งค่า Supabase</h2></div>';
+      document.body.appendChild(b);
+    });
+    return;
+  }
+  window.storage = { get, set };
+})();
+</script>
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const r3 = n => Math.round(n*1000)/1000;
+  const r2 = n => Math.round(n*100)/100;
+  const r4 = n => Math.round(n*10000)/10000;
+  const fmtBaht = n => (Math.round((+n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtInt = n => (Math.round(+n||0)).toLocaleString('en-US');
+  function localISO(d){ d=d||new Date(); const p=n=>String(n).padStart(2,'0');
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+  function thDate(iso){ if(!iso) return ''; const d=String(iso).slice(0,10).split('-');
+    if(d.length<3) return ''; return (+d[2])+'/'+(+d[1])+'/'+(+d[0]+543); }
+  function thDateTime(iso){ if(!iso) return ''; const t=String(iso).slice(11,16); return thDate(iso)+(t?' '+t+' น.':''); }
+  const DOW=['อา','จ','อ','พ','พฤ','ศ','ส'];
+  function thDow(ymd){ const p=String(ymd).split('-'); if(p.length<3) return '';
+    const d=new Date(+p[0],+p[1]-1,+p[2]); return isNaN(d.getTime())?'':DOW[d.getDay()]; }
+
+  /* ═══════════════════════════════════════════════════════════════
+     COST — คิดเงินล้วนๆ ไม่แตะ DOM (มีเทสแยกทุกฟังก์ชัน)
+     ราคาทั้งหมดเก็บในแอพนี้เอง (คีย์ v3k_price) ไม่ไปแก้ 2 แอพเดิม
+     ═══════════════════════════════════════════════════════════════ */
+  const COST = {
+    /* ราคาใย บาท/กก. — ถ้าใส่แยกไว้ทีละก้อนใช้ของก้อนนั้น ไม่งั้นใช้ราคามาตรฐาน */
+    fiberPricePerKg(PRICE, name, lot){
+      const e=((PRICE||{}).fiber||{})[name];
+      if(!e) return { baht:0, src:'none' };
+      const byLot=(e.lots||{})[String(lot)];
+      if(+byLot>0) return { baht:+byLot, src:'lot' };
+      if(+e.std>0) return { baht:+e.std, src:'std' };
+      return { baht:0, src:'none' };
+    },
+
+    /* ราคาม้วนผ้า บาท/ม้วน */
+    fabricPricePerRoll(PRICE, type, rollNo){
+      const e=((PRICE||{}).fabric||{})[type];
+      if(!e) return { baht:0, src:'none' };
+      const byRoll=(e.rolls||{})[String(rollNo)];
+      if(+byRoll>0) return { baht:+byRoll, src:'roll' };
+      if(+e.std>0) return { baht:+e.std, src:'std' };
+      return { baht:0, src:'none' };
+    },
+
+    /* ค่าผ้าต่อชิ้น = ราคาม้วน ÷ จำนวนชิ้นที่ตัดได้จากม้วนนั้นจริง */
+    fabricBahtPerPiece(PRICE, cutBatches, batchId){
+      const b=(cutBatches||[]).find(x=>x.id===batchId);
+      if(!b) return { baht:0, src:'none', type:'' };
+      const type=b.fabricType||'';
+      const p=COST.fabricPricePerRoll(PRICE, type, b.rollNo);
+      if(!p.baht) return { baht:0, src:'none', type:type };
+      let pieces=0;
+      if(b.rollNo!=null && b.rollNo!==''){
+        pieces=(cutBatches||[]).filter(x=>x.fabricType===type && String(x.rollNo)===String(b.rollNo))
+          .reduce((s,x)=>s+(+x.qtyCut||0),0);
+      }
+      if(!pieces) pieces=+b.qtyCut||0;
+      if(!pieces) return { baht:0, src:'noCut', type:type };
+      return { baht:r4(p.baht/pieces), src:p.src, type:type, pieces:pieces, roll:p.baht };
+    },
+
+    /* จำนวนถุงต่อกระสอบ (ปัดลง เหมือนแอพสต๊อก) */
+    sackPieces(sackKg, perBag){
+      const k=+sackKg||0, w=+perBag||0;
+      if(k<=0||w<=0) return 0;
+      return Math.floor(k/w);
+    },
+
+    /* ค่าถุงต่อใบ = ราคากระสอบ ÷ จำนวนใบในกระสอบนั้น */
+    bagBahtPerPiece(PRICE, sackReceipts, kind, name, sackNo){
+      const key=(kind==='zip')?'zip':'pack';
+      const e=((PRICE||{})[key]||{})[name];
+      if(!e) return { baht:0, src:'none' };
+      const bySack=(e.sacks||{})[String(sackNo)];
+      const perSack = (+bySack>0) ? +bySack : (+e.std>0 ? +e.std : 0);
+      if(!perSack) return { baht:0, src:'none' };
+      const src=(+bySack>0)?'sack':'std';
+      const rows=(sackReceipts||[]).filter(r=>r.kind===kind && r.name===name);
+      const exact=rows.filter(r=>String(r.sackNo)===String(sackNo))[0];
+      const ref=exact||rows.sort((a,b)=>String(b.time).localeCompare(String(a.time)))[0];
+      if(!ref) return { baht:0, src:'noSack' };
+      const pcs=COST.sackPieces(ref.sackWeightKg, ref.weightPerBag);
+      if(!pcs) return { baht:0, src:'noSack' };
+      return { baht:r4(perSack/pcs), src:src, pieces:pcs, perSack:perSack };
+    },
+
+    gasPricePerTank(PRICE){
+      const g=+((PRICE||{}).gas||0);
+      return g>0 ? { baht:g, src:'std' } : { baht:0, src:'none' };
+    },
+
+    /* ชั่วโมงเดินเครื่อง — นับจากช่วงห่างระหว่างแพ็คที่บันทึกจริง
+       ช่องว่างเกิน capMin นาที ถือว่าหยุดเดินเครื่อง ไม่นับ (กันข้ามคืน/หยุดยาว) */
+    machineHours(rows, capMin){
+      const cap=(capMin==null?60:capMin);
+      const ts=(rows||[]).map(r=>String(r.time||'')).filter(Boolean).sort();
+      if(!ts.length) return 0;
+      if(ts.length===1) return r2(cap/60);
+      let min=0, gaps=0;
+      for(let i=1;i<ts.length;i++){
+        const a=new Date(ts[i-1]).getTime(), b=new Date(ts[i]).getTime();
+        if(isNaN(a)||isNaN(b)) continue;
+        const gap=(b-a)/60000;
+        /* ห่างเกิน cap = หยุดเดินเครื่อง (พักเที่ยง/เลิกงาน/ข้ามคืน) ไม่นับเลย */
+        if(gap>0 && gap<=cap){ min+=gap; gaps++; }
+      }
+      /* แพ็คแรกก็กินเวลาทำเหมือนกัน — บวกเวลาเฉลี่ยของแพ็คหนึ่งเข้าไป */
+      min += gaps>0 ? Math.min(cap, min/gaps) : cap;
+      return r2(min/60);
+    },
+
+    /* ช่วงวันเวลาที่ลงมือผลิตจริง — เอาจากเวลาที่บันทึกท้ายไลน์ ไม่ใช่วันเปิดออเดอร์ */
+    runSpan(rows){
+      const ts=(rows||[]).map(r=>String(r.time||'')).filter(Boolean).sort();
+      if(!ts.length) return null;
+      return { from:ts[0], to:ts[ts.length-1], days:new Set(ts.map(t=>t.slice(0,10))).size };
+    },
+
+    /* แยกรายวัน — วันไหนเริ่มกี่โมง เลิกกี่โมง ได้กี่แพ็ค กี่ชิ้น เดินเครื่องกี่ชั่วโมง */
+    runDays(rows, capMin){
+      const by={};
+      (rows||[]).forEach(r=>{ const d=String(r.time||'').slice(0,10); if(!d) return; (by[d]=by[d]||[]).push(r); });
+      return Object.keys(by).sort().map(d=>{
+        const rs=by[d].slice().sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+        return { date:d, packs:rs.length,
+                 pieces:rs.reduce((s,x)=>s+(+x.piecesPerPack||0),0),
+                 first:String(rs[0].time).slice(11,16),
+                 last:String(rs[rs.length-1].time).slice(11,16),
+                 hours:COST.machineHours(rs,capMin) };
+      });
+    },
+
+    /* ชั่วโมงเดินเครื่องเฉลี่ยต่อเดือน จากยอดผลิตจริง */
+    hoursPerMonth(rows, capMin){
+      const byMonth={};
+      (rows||[]).forEach(r=>{ const m=String(r.time||'').slice(0,7); if(m) (byMonth[m]=byMonth[m]||[]).push(r); });
+      const months=Object.keys(byMonth);
+      if(!months.length) return 0;
+      const total=months.reduce((s,m)=>s+COST.machineHours(byMonth[m],capMin),0);
+      return r2(total/months.length);
+    },
+
+    /* ชิ้นที่ผลิตได้จริงต่อชั่วโมง */
+    piecesPerHour(rows, capMin){
+      const h=COST.machineHours(rows,capMin);
+      if(h<=0) return 0;
+      const pcs=(rows||[]).reduce((s,r)=>s+(+r.piecesPerPack||0),0);
+      return r2(pcs/h);
+    },
+
+    /* ค่าคงที่ต่อชั่วโมงเดินเครื่อง */
+    fixedPerHour(fixedList, hoursPerMonth){
+      const sum=(fixedList||[]).reduce((s,f)=>s+(+f.baht||0),0);
+      const h=+hoursPerMonth||0;
+      return h>0 ? r2(sum/h) : 0;
+    },
+
+    /* ═══ ต้นทุนจริงของงานหนึ่งงาน ═══ */
+    jobCost(ctx, orderId){
+      const S=ctx.S||{}, P=ctx.PROD||{}, K=ctx.KSET||{}, PRICE=ctx.PRICE||{};
+      const order=(P.orders||[]).find(o=>o.id===orderId)||null;
+      const lines=(P.line||[]).filter(l=>l.orderId===orderId);
+      const packs=lines.length;
+      let pieces=lines.reduce((s,l)=>s+(+l.piecesPerPack||0),0);
+      if(!pieces && order && order.spec) pieces=packs*(+order.spec.piecesPerPack||0);
+      const hours=COST.machineHours(lines);
+      const span=COST.runSpan(lines);
+      const days=COST.runDays(lines);
+      const miss=[]; const detail=[];
+
+      /* ---- ใย ---- */
+      let fiberKg=0, fiberBaht=0;
+      let useRows=(P.use||[]).filter(u=>u.orderId===orderId);
+      let fiberFrom='use';
+      if(!useRows.length){ useRows=(P.wd||[]).filter(w=>w.orderId===orderId); fiberFrom='wd'; }
+      useRows.forEach(u=>{
+        const kg=+u.kg||0; if(!kg) return;
+        const p=COST.fiberPricePerKg(PRICE, u.fiberName, u.lot);
+        fiberKg=r3(fiberKg+kg); fiberBaht=r2(fiberBaht+kg*p.baht);
+        if(p.src==='none') miss.push('ใย "'+u.fiberName+'" ยังไม่ได้ใส่ราคา');
+        detail.push({cat:'ใย', what:u.fiberName+' เบอร์ '+u.lot, qty:kg+' กก.', unit:p.baht, baht:r2(kg*p.baht), src:p.src});
+      });
+
+      /* ---- ผ้า ---- */
+      let fabPieces=0, fabBaht=0;
+      (P.fabricWd||[]).filter(w=>w.orderId===orderId).forEach(w=>{
+        (w.picks||[]).forEach(pk=>{
+          const q=+pk.qty||0; if(!q) return;
+          const c=COST.fabricBahtPerPiece(PRICE, S.cutBatches, pk.batchId);
+          fabPieces+=q; fabBaht=r2(fabBaht+q*c.baht);
+          if(c.src==='none') miss.push('ผ้า "'+(c.type||w.fabricType)+'" ยังไม่ได้ใส่ราคา');
+          else if(c.src==='noCut') miss.push('ผ้า "'+(c.type||w.fabricType)+'" ถุง #'+pk.batchNo+' ไม่รู้ว่าตัดได้กี่ชิ้น');
+          detail.push({cat:'ผ้า', what:(c.type||w.fabricType)+' ถุง #'+pk.batchNo, qty:q+' ชิ้น', unit:c.baht, baht:r2(q*c.baht), src:c.src});
+        });
+      });
+
+      /* ---- ถุง ---- */
+      let bagBaht=0, zipPcs=0, packPcs=0;
+      (P.bagUse||[]).filter(b=>b.orderId===orderId).forEach(b=>{
+        const q=+b.pieces||0; if(!q) return;
+        const c=COST.bagBahtPerPiece(PRICE, S.sackReceipts, b.kind, b.name, b.sackNo);
+        if(b.kind==='zip') zipPcs+=q; else packPcs+=q;
+        bagBaht=r2(bagBaht+q*c.baht);
+        if(c.src==='none') miss.push('ถุง "'+b.name+'" ยังไม่ได้ใส่ราคา');
+        else if(c.src==='noSack') miss.push('ถุง "'+b.name+'" ไม่รู้จำนวนใบต่อกระสอบ');
+        detail.push({cat:'ถุง', what:(b.kind==='zip'?'ถุงซิล ':'ถุงแพ็ค ')+b.name+' #'+b.sackNo, qty:q+' ใบ', unit:c.baht, baht:r2(q*c.baht), src:c.src});
+      });
+
+      /* ---- ค่าจ้างเย็บ ---- */
+      let sewPieces=0, sewBaht=0;
+      if(order && (order.productType||'')!=='ใย'){
+        (P.fabricWd||[]).filter(w=>w.orderId===orderId).forEach(w=>{
+          const q=+w.qty||0; if(!q) return;
+          const rate=+((K.sewBySize||{})[w.size])||+K.sewPerPiece||0;
+          sewPieces+=q; sewBaht=r2(sewBaht+q*rate);
+          if(!rate) miss.push('ยังไม่ได้ตั้งค่าจ้างเย็บ (ไซซ์ '+w.size+')');
+          detail.push({cat:'ค่าเย็บ', what:'ไซซ์ '+w.size, qty:q+' ชิ้น', unit:rate, baht:r2(q*rate), src:rate?'set':'none'});
+        });
+      }
+
+      /* ---- ค่าแรงในโรง (รายวัน + รายชิ้น) ---- */
+      const hrRate=(+K.laborHoursPerDay>0)? (+K.laborDaily||0)/(+K.laborHoursPerDay) : 0;
+      const laborTime=r2(hours*hrRate);
+      const laborPiece=r2(pieces*(+K.laborPerPiece||0));
+      if(laborTime) detail.push({cat:'ค่าแรง', what:'รายวัน', qty:hours+' ชม.', unit:r2(hrRate), baht:laborTime, src:'set'});
+      if(laborPiece) detail.push({cat:'ค่าแรง', what:'รายชิ้น', qty:pieces+' ชิ้น', unit:+K.laborPerPiece||0, baht:laborPiece, src:'set'});
+
+      /* ---- แก๊ส: นับถังที่เปลี่ยนระหว่างช่วงเวลาของงานนี้ ---- */
+      let gasTanks=0, gasBaht=0;
+      if(order && order.startedAt){
+        const from=String(order.startedAt), to=String(order.finishedAt||'9999');
+        (P.gasSwaps||[]).forEach(g=>{
+          const t=String(g.time||'');
+          if(t>=from && t<=to) gasTanks+=(g.gasNos&&g.gasNos.length)||1;
+        });
+        if(gasTanks){
+          const gp=COST.gasPricePerTank(PRICE);
+          gasBaht=r2(gasTanks*gp.baht);
+          if(gp.src==='none') miss.push('ยังไม่ได้ใส่ราคาถังแก๊ส');
+          detail.push({cat:'แก๊ส', what:'เปลี่ยนถังระหว่างงาน', qty:gasTanks+' ถัง', unit:gp.baht, baht:gasBaht, src:gp.src});
+        }
+      }
+
+      /* ---- ค่าไฟ / ค่าส่ง ---- */
+      const elec=r2(hours*(+K.elecPerHour||0));
+      const ship=r2(packs*(+K.shipPerPack||0));
+      if(elec) detail.push({cat:'ค่าไฟ', what:'เดินเครื่อง', qty:hours+' ชม.', unit:+K.elecPerHour||0, baht:elec, src:'set'});
+      if(ship) detail.push({cat:'ค่าส่ง', what:'ตามจำนวนแพ็ค', qty:packs+' แพ็ค', unit:+K.shipPerPack||0, baht:ship, src:'set'});
+
+      /* ---- ค่าคงที่เฉลี่ยตามชั่วโมงเดินเครื่อง ---- */
+      const hpm=+K._hoursPerMonth||0;
+      const fixedRate=COST.fixedPerHour(K.fixed, hpm);
+      const fixed=r2(hours*fixedRate);
+      if(fixed) detail.push({cat:'ค่าคงที่', what:'เฉลี่ยตามชั่วโมงเดินเครื่อง', qty:hours+' ชม.', unit:fixedRate, baht:fixed, src:'set'});
+      if(!hpm && (K.fixed||[]).length) miss.push('ยังไม่รู้ชั่วโมงเดินเครื่องต่อเดือน — ค่าคงที่ยังไม่ถูกเฉลี่ยลงงาน');
+
+      const total=r2(fiberBaht+fabBaht+bagBaht+sewBaht+laborTime+laborPiece+gasBaht+elec+ship+fixed);
+      return {
+        orderId, order, packs, pieces, hours, span, days,
+        fiber:{kg:fiberKg, baht:fiberBaht, from:fiberFrom},
+        fabric:{pieces:fabPieces, baht:fabBaht},
+        bag:{zip:zipPcs, pack:packPcs, baht:bagBaht},
+        sew:{pieces:sewPieces, baht:sewBaht},
+        labor:{time:laborTime, piece:laborPiece, baht:r2(laborTime+laborPiece)},
+        gas:{tanks:gasTanks, baht:gasBaht},
+        elec:{baht:elec}, ship:{baht:ship},
+        fixed:{baht:fixed, perHour:fixedRate},
+        total,
+        perPiece: pieces>0 ? r2(total/pieces) : 0,
+        perPack: packs>0 ? r2(total/packs) : 0,
+        missing:[...new Set(miss)], detail
+      };
+    },
+
+    /* ═══ ตีราคางานใหม่ ═══ */
+    quoteCost(q, K){
+      K=K||{};
+      const pieces=+q.pieces||0;
+      const perPack=+q.perPack||0;
+      const packs=perPack>0?Math.ceil(pieces/perPack):0;
+      const fiber=r2(pieces*(+q.fiberKg||0)*(+q.fiberBahtPerKg||0));
+      const fabric=(q.type==='ใย')?0:r2(pieces*(+q.fabBahtPerPiece||0));
+      const zip=r2(packs*(+q.zipPerPack||0)*(+q.zipBaht||0));
+      const pack=r2(packs*(+q.packPerPack||0)*(+q.packBaht||0));
+      const sew=(q.type==='ใย')?0:r2(pieces*(+q.sewPerPiece||0));
+      const hours=+q.hours||0;
+      const hrRate=(+K.laborHoursPerDay>0)? (+K.laborDaily||0)/(+K.laborHoursPerDay) : 0;
+      const laborTime=r2(hours*hrRate);
+      const laborPiece=r2(pieces*(+K.laborPerPiece||0));
+      const elec=r2(hours*(+K.elecPerHour||0));
+      const ship=r2(packs*(+K.shipPerPack||0));
+      const fixed=r2(hours*COST.fixedPerHour(K.fixed, +K._hoursPerMonth||0));
+      const total=r2(fiber+fabric+zip+pack+sew+laborTime+laborPiece+elec+ship+fixed);
+      const marginPct=(q.marginPct==null||q.marginPct==='')?(+K.marginPct||0):+q.marginPct;
+      const sell=r2(total*(1+marginPct/100));
+      const vatPct=+K.vatPct||0;
+      const sellVat=r2(sell*(1+vatPct/100));
+      return {
+        pieces, packs, hours,
+        fiber, fabric, zip, pack, sew,
+        labor:r2(laborTime+laborPiece), laborTime, laborPiece,
+        elec, ship, fixed, total,
+        perPiece: pieces>0?r2(total/pieces):0,
+        marginPct, profit:r2(sell-total), sell,
+        sellPerPiece: pieces>0?r2(sell/pieces):0,
+        vatPct, sellVat,
+        sellVatPerPiece: pieces>0?r2(sellVat/pieces):0
+      };
+    }
+  };
+  /* ---- END COST ---- */
+
+  /* ═══════════════════════════════════════════════════════════════
+     STATE
+     ═══════════════════════════════════════════════════════════════ */
+  let S = { fiberReceipts:[], fabricReceipts:[], cutBatches:[], sackReceipts:[], gasReceipts:[] };
+  let PROD = { orders:[], wd:[], use:[], fabricWd:[], bagWd:[], bagUse:[], gasSwaps:[], line:[] };
+  let KSET = { sewPerPiece:0, sewBySize:{}, laborDaily:0, laborHoursPerDay:8, laborPerPiece:0,
+               elecPerHour:0, shipPerPack:0, fixed:[], hoursOverride:0, marginPct:20, vatPct:0 };
+  let PRICE = { fiber:{}, fabric:{}, zip:{}, pack:{}, gas:0 };
+  let QUOTES = [];
+  let current='price', lastHash='';
+
+  const hasStore = !!(window.storage && window.storage.get && window.storage.set);
+  let storeDown = !hasStore;
+  const pending={}, inflight={};
+  const KEYMAP = { v3k_set:()=>KSET, v3k_price:()=>PRICE, v3k_quote:()=>({quotes:QUOTES}) };
+  function setSaveState(state,msg){
+    const el=$('saveState'); if(!el) return;
+    if(state==='saving'){ el.className='savechip saving'; el.textContent='กำลังบันทึก…'; }
+    else if(state==='ok'){ el.className='savechip ok'; el.textContent='บันทึกแล้ว ✓'; }
+    else { el.className='savechip bad'; el.textContent='⚠ ยังบันทึกไม่สำเร็จ — แตะเพื่อลองใหม่'+(msg?' ('+msg+')':''); }
+  }
+  async function flush(k,attempt){
+    attempt=attempt||0;
+    if(inflight[k]){ setTimeout(()=>flush(k,attempt),400); return; }
+    if(!(k in pending)) return;
+    const data=pending[k]; delete pending[k]; inflight[k]=true; setSaveState('saving');
+    try{
+      if(!hasStore) throw new Error('no storage');
+      await window.storage.set(k,JSON.stringify(data),true);
+      inflight[k]=false; storeDown=false;
+      await window.storage.set('v3k_pulse',Date.now()+'',true).catch(()=>{});
+      if(Object.keys(pending).length) Object.keys(pending).forEach(kk=>flush(kk)); else setSaveState('ok');
+    }catch(e){
+      inflight[k]=false; pending[k]=data;
+      if(attempt<6){ setTimeout(()=>flush(k,attempt+1), Math.min(15000,600*Math.pow(2,attempt))); setSaveState('saving'); }
+      else { storeDown=true; setSaveState('bad', (e&&e.message)?String(e.message).slice(0,60):''); }
+    }
+  }
+  function put(k){ pending[k]=KEYMAP[k](); return flush(k); }
+  window.addEventListener('beforeunload',function(e){
+    const busy = Object.keys(pending).length || Object.keys(inflight).some(k=>inflight[k]);
+    if(busy){ e.preventDefault(); e.returnValue=''; return ''; }
+  });
+  const saveSet=()=>put('v3k_set'), savePrice=()=>put('v3k_price'), saveQuotes=()=>put('v3k_quote');
+
+  async function rawGet(k){ if(!hasStore) return null; try{ const r=await window.storage.get(k,true); return r?r.value:null; }catch(e){ return null; } }
+  async function readAll(){
+    const [fi,fa,bg,gs,ord,fd,ln,st,pr,qt] = await Promise.all([
+      rawGet('v3s_fiber'), rawGet('v3s_fabric'), rawGet('v3s_bag'), rawGet('v3s_gas'),
+      rawGet('v3_orders'), rawGet('v3_feed'), rawGet('v3_line'),
+      rawGet('v3k_set'), rawGet('v3k_price'), rawGet('v3k_quote')
+    ]);
+    const hash=[fi,fa,bg,gs,ord,fd,ln,st,pr,qt].map(x=>x||'').join('|');
+    const parse=(s,f)=>{ try{ return s?JSON.parse(s):f; }catch(e){ return f; } };
+    const Pf=parse(fi,{}), Pa=parse(fa,{}), Pb=parse(bg,{}), Pg=parse(gs,{});
+    S.fiberReceipts=Pf.receipts||[];
+    S.fabricReceipts=Pa.receipts||[]; S.cutBatches=Pa.cutBatches||[];
+    S.sackReceipts=Pb.receipts||[]; S.gasReceipts=Pg.receipts||[];
+    const A=parse(ord,{}), B=parse(fd,{}), C=parse(ln,{});
+    PROD.orders=A.orders||[];
+    PROD.wd=B.wd||[]; PROD.use=B.use||[]; PROD.fabricWd=B.fabricWd||[]; PROD.bagWd=B.bagWd||[];
+    PROD.bagUse=B.bagUse||[]; PROD.gasSwaps=B.gasSwaps||[];
+    PROD.line=C.line||[];
+    const K=parse(st,null);
+    if(K && typeof K==='object'){ KSET=Object.assign(KSET,K); KSET.sewBySize=K.sewBySize||{}; KSET.fixed=K.fixed||[]; }
+    const P=parse(pr,null);
+    if(P && typeof P==='object') PRICE=Object.assign({fiber:{},fabric:{},zip:{},pack:{},gas:0}, P);
+    QUOTES=(parse(qt,{}).quotes)||[];
+    return hash;
+  }
+
+  let toastT;
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400); }
+  function ask(title, detail, opts){
+    opts=opts||{};
+    return new Promise(function(res){
+      var ov=document.createElement('div');
+      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:99998;display:flex;align-items:center;justify-content:center;padding:18px';
+      var bx=document.createElement('div');
+      bx.style.cssText='background:#1a222c;color:#f2ede3;border:1px solid #2b3645;border-radius:14px;max-width:430px;width:100%;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.5)';
+      var h=document.createElement('div'); h.style.cssText="font:600 17px 'Kanit',sans-serif;margin-bottom:8px"; h.textContent=title||'';
+      var p=document.createElement('div'); p.style.cssText="font:400 14px/1.65 'Sarabun',sans-serif;white-space:pre-line;color:#c7d2dd;margin-bottom:16px"; p.textContent=detail||'';
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:10px';
+      var ok=document.createElement('button'); ok.textContent=opts.okText||'ยืนยัน'; ok.setAttribute('data-noguard','1');
+      ok.style.cssText="flex:1;padding:13px;border:0;border-radius:10px;background:#ff8a3d;color:#12181f;font:600 15px 'Kanit',sans-serif";
+      var no=document.createElement('button'); no.textContent=opts.cancelText||'ยกเลิก'; no.setAttribute('data-noguard','1');
+      no.style.cssText="flex:1;padding:13px;border:1px solid #2b3645;border-radius:10px;background:#212b37;color:#f2ede3;font:600 15px 'Kanit',sans-serif";
+      function done(v){ try{ document.body.removeChild(ov); }catch(e){} res(v); }
+      ok.onclick=function(){done(true);}; no.onclick=function(){done(false);};
+      ov.onclick=function(e){ if(e.target===ov) done(false); };
+      row.appendChild(ok); if(!opts.infoOnly) row.appendChild(no);
+      bx.appendChild(h); if(detail) bx.appendChild(p); bx.appendChild(row);
+      ov.appendChild(bx); document.body.appendChild(ov); setTimeout(function(){ok.focus();},30);
+    });
+  }
+
+  /* กรอกค้างไว้ห้ามวาดหน้าใหม่ ไม่งั้นตัวเลขที่พิมพ์ไปหายกลางคัน */
+  let formDirty=false;
+  document.addEventListener('input',function(ev){
+    const t=ev.target; if(!t||!t.closest) return;
+    if(t.closest('#p-price')||t.closest('#p-set')) formDirty=true;
+  },true);
+
+  function hoursPerMonthNow(){
+    const ov=+KSET.hoursOverride||0;
+    return ov>0 ? ov : COST.hoursPerMonth(PROD.line);
+  }
+  function ctx(){ return { S, PROD, PRICE, KSET:Object.assign({}, KSET, {_hoursPerMonth:hoursPerMonthNow()}) }; }
+  const SRCTXT = { lot:'ราคาก้อนนั้น', roll:'ราคาม้วนนั้น', sack:'ราคากระสอบนั้น',
+                   std:'ราคามาตรฐาน', set:'ค่าที่ตั้งไว้',
+                   none:'ยังไม่ได้ใส่ราคา', noCut:'ไม่รู้จำนวนที่ตัดได้', noSack:'ไม่รู้จำนวนใบ/กระสอบ' };
+  function srcBadge(s){
+    if(s==='none'||s==='noCut'||s==='noSack') return '<span class="bdg bad">'+(SRCTXT[s]||s)+'</span>';
+    if(s==='std') return '<span class="bdg warn">'+SRCTXT[s]+'</span>';
+    return '<span class="bdg ok">'+(SRCTXT[s]||s)+'</span>';
+  }
+  function orderLabel(o){ return o ? (o.customer+' — '+o.code) : '(ออเดอร์ถูกลบแล้ว)'; }
+  function jobsWithWork(){
+    const ids=new Set(PROD.line.map(l=>l.orderId));
+    return PROD.orders.filter(o=>ids.has(o.id));
+  }
+  const uniq = a => [...new Set(a)];
+  /* รวมชื่อจากสต๊อก + ชื่อที่เคยใส่ราคาไว้ (กันราคาหายถ้าของนั้นถูกลบ/เปลี่ยนชื่อในสต๊อก) */
+  const priced = grp => Object.keys((PRICE||{})[grp]||{});
+  function fiberNames(){ return uniq(S.fiberReceipts.map(r=>r.fiberName).concat(priced('fiber'))).filter(Boolean).sort(); }
+  function fabricNames(){ return uniq(S.fabricReceipts.map(r=>r.fabricType).concat(S.cutBatches.map(b=>b.fabricType)).concat(priced('fabric'))).filter(Boolean).sort(); }
+  function bagNames(kind){ return uniq(S.sackReceipts.filter(r=>r.kind===kind).map(r=>r.name).concat(priced(kind))).filter(Boolean).sort(); }
+
+  /* ═══════════════════════════════════════════════════════════════
+     1. ราคาของ
+     ═══════════════════════════════════════════════════════════════ */
+  function priceInput(path, val, ph){
+    return '<input data-pr="'+esc(path)+'" type="number" inputmode="decimal" step="0.01" value="'+(val>0?val:'')+'" placeholder="'+(ph||'—')+'">';
+  }
+  function rPrice(){
+    /* --- ใย --- */
+    const usedLots={};
+    (PROD.use||[]).concat(PROD.wd||[]).forEach(u=>{
+      if(!u.fiberName) return;
+      (usedLots[u.fiberName]=usedLots[u.fiberName]||new Set()).add(String(u.lot));
+    });
+    $('prFiber').innerHTML = fiberNames().length ? fiberNames().map(n=>{
+      const e=(PRICE.fiber||{})[n]||{};
+      const lots=S.fiberReceipts.filter(r=>r.fiberName===n)
+        .sort((a,b)=>String(b.time).localeCompare(String(a.time)));
+      const used=usedLots[n]||new Set();
+      const rows=lots.slice(0,60).map(l=>{
+        const isUsed=used.has(String(l.lotNo));
+        return '<div class="frow"><div style="flex:1;font-size:12.5px">เบอร์ '+esc(l.lotNo)+' · '+l.kg+' กก. · '+thDate(l.time)+
+          (isUsed?' <span class="bdg warn">เคยเบิกใช้</span>':'')+'</div>'+
+          '<div style="width:110px">'+priceInput('fiber|'+n+'|lot|'+l.lotNo, (e.lots||{})[String(l.lotNo)], 'ตามมาตรฐาน')+'</div></div>';
+      }).join('');
+      return '<div class="scard"><div class="nm">'+esc(n)+'</div>'+
+        '<div class="frow" style="margin-top:6px;"><div style="flex:1;font-size:12.5px">ราคามาตรฐาน (บาท/กก.)</div>'+
+        '<div style="width:110px">'+priceInput('fiber|'+n+'|std', e.std, 'เช่น 62.50')+'</div></div>'+
+        (lots.length?'<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent2)">แยกราคาทีละก้อน ('+lots.length+' ก้อน)</summary>'+
+          '<div class="sumline" style="margin-top:4px">ก้อนไหนไม่ใส่ = ใช้ราคามาตรฐาน</div>'+rows+
+          (lots.length>60?'<div class="sumline">แสดง 60 ก้อนล่าสุดจากทั้งหมด '+lots.length+' ก้อน</div>':'')+
+          '</details>':'')+
+        '</div>';
+    }).join('') : '<div class="empty">ยังไม่มีใยในระบบ</div>';
+
+    /* --- ผ้า --- */
+    $('prFabric').innerHTML = fabricNames().length ? fabricNames().map(n=>{
+      const e=(PRICE.fabric||{})[n]||{};
+      const rolls=S.fabricReceipts.filter(r=>r.fabricType===n)
+        .sort((a,b)=>String(b.time).localeCompare(String(a.time)));
+      const cutBy={};
+      S.cutBatches.filter(b=>b.fabricType===n).forEach(b=>{ const k=String(b.rollNo); cutBy[k]=(cutBy[k]||0)+(+b.qtyCut||0); });
+      const rows=rolls.slice(0,60).map(l=>
+        '<div class="frow"><div style="flex:1;font-size:12.5px">ม้วน #'+esc(l.rollNo)+' · '+thDate(l.time)+
+        (cutBy[String(l.rollNo)]?' · ตัดได้ '+fmtInt(cutBy[String(l.rollNo)])+' ชิ้น':' <span class="bdg warn">ยังไม่ได้ตัด</span>')+'</div>'+
+        '<div style="width:110px">'+priceInput('fabric|'+n+'|roll|'+l.rollNo, (e.rolls||{})[String(l.rollNo)], 'ตามมาตรฐาน')+'</div></div>').join('');
+      const perPc=(()=>{ const b=S.cutBatches.filter(x=>x.fabricType===n)[0];
+        if(!b) return null; const c=COST.fabricBahtPerPiece(PRICE,S.cutBatches,b.id); return c.baht?c:null; })();
+      return '<div class="scard"><div class="nm">'+esc(n)+'</div>'+
+        '<div class="frow" style="margin-top:6px;"><div style="flex:1;font-size:12.5px">ราคามาตรฐาน (บาท/ม้วน)</div>'+
+        '<div style="width:110px">'+priceInput('fabric|'+n+'|std', e.std, 'เช่น 4200')+'</div></div>'+
+        (perPc?'<div class="sumline">≈ <b style="color:var(--accent2)">'+fmtBaht(perPc.baht)+' บาท/ชิ้น</b> (ม้วนละ '+fmtBaht(perPc.roll)+' ÷ ตัดได้ '+fmtInt(perPc.pieces)+' ชิ้น)</div>':'')+
+        (rolls.length?'<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent2)">แยกราคาทีละม้วน ('+rolls.length+' ม้วน)</summary>'+
+          '<div class="sumline" style="margin-top:4px">ม้วนไหนไม่ใส่ = ใช้ราคามาตรฐาน</div>'+rows+'</details>':'')+
+        '</div>';
+    }).join('') : '<div class="empty">ยังไม่มีผ้าในระบบ</div>';
+
+    /* --- ถุง --- */
+    let bh='';
+    ['zip','pack'].forEach(kind=>{
+      const names=bagNames(kind);
+      if(!names.length) return;
+      bh+='<div style="margin-top:10px;font-size:12px;color:#fff;">'+(kind==='zip'?'ถุงซิล':'ถุงแพ็ค')+'</div>';
+      names.forEach(n=>{
+        const e=((PRICE[kind]||{})[n])||{};
+        const sacks=S.sackReceipts.filter(r=>r.kind===kind&&r.name===n)
+          .sort((a,b)=>String(b.time).localeCompare(String(a.time)));
+        const c=COST.bagBahtPerPiece(PRICE,S.sackReceipts,kind,n,null);
+        const rows=sacks.slice(0,60).map(l=>{
+          const pcs=COST.sackPieces(l.sackWeightKg,l.weightPerBag);
+          return '<div class="frow"><div style="flex:1;font-size:12.5px">กระสอบ #'+esc(l.sackNo)+' · '+l.sackWeightKg+' กก.'+
+            (pcs?' ≈ '+fmtInt(pcs)+' ใบ':' <span class="bdg warn">ไม่รู้จำนวนใบ</span>')+'</div>'+
+            '<div style="width:110px">'+priceInput(kind+'|'+n+'|sack|'+l.sackNo, (e.sacks||{})[String(l.sackNo)], 'ตามมาตรฐาน')+'</div></div>';
+        }).join('');
+        bh+='<div class="scard"><div class="nm">'+esc(n)+'</div>'+
+          '<div class="frow" style="margin-top:6px;"><div style="flex:1;font-size:12.5px">ราคามาตรฐาน (บาท/กระสอบ)</div>'+
+          '<div style="width:110px">'+priceInput(kind+'|'+n+'|std', e.std, 'เช่น 850')+'</div></div>'+
+          (c.baht?'<div class="sumline">≈ <b style="color:var(--accent2)">'+fmtBaht(c.baht)+' บาท/ใบ</b> (กระสอบละ '+fmtBaht(c.perSack)+' ÷ '+fmtInt(c.pieces)+' ใบ)</div>':'')+
+          (sacks.length?'<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent2)">แยกราคาทีละกระสอบ ('+sacks.length+')</summary>'+rows+'</details>':'')+
+          '</div>';
+      });
+    });
+    $('prBag').innerHTML = bh || '<div class="empty">ยังไม่มีถุงในระบบ</div>';
+    $('prGas').value = PRICE.gas>0?PRICE.gas:'';
+
+    /* --- สรุปที่ยังไม่ใส่ราคา --- */
+    const todo=[];
+    fiberNames().forEach(n=>{ const e=(PRICE.fiber||{})[n]||{}; if(!(+e.std>0)) todo.push('ใย '+n); });
+    fabricNames().forEach(n=>{ const e=(PRICE.fabric||{})[n]||{}; if(!(+e.std>0)) todo.push('ผ้า '+n); });
+    ['zip','pack'].forEach(k=>bagNames(k).forEach(n=>{ const e=((PRICE[k]||{})[n])||{}; if(!(+e.std>0)) todo.push((k==='zip'?'ถุงซิล ':'ถุงแพ็ค ')+n); }));
+    if(!(+PRICE.gas>0) && S.gasReceipts.length) todo.push('แก๊ส');
+    $('priceTodo').innerHTML = todo.length
+      ? '<span class="bdg bad">ขาด '+todo.length+' อย่าง</span> ต้นทุนจะต่ำกว่าความจริงจนกว่าจะใส่ครบ:<br>'+todo.map(t=>'• '+esc(t)).join('<br>')
+      : '<span class="bdg ok">ครบแล้ว</span> ใส่ราคาทุกอย่างเรียบร้อย ต้นทุนคิดได้เต็มจำนวน';
+  }
+  function collectPrice(){
+    document.querySelectorAll('#p-price [data-pr]').forEach(inp=>{
+      const parts=inp.getAttribute('data-pr').split('|');
+      const v=+inp.value||0;
+      const grp=parts[0], name=parts[1], kind=parts[2], key=parts[3];
+      PRICE[grp]=PRICE[grp]||{};
+      PRICE[grp][name]=PRICE[grp][name]||{};
+      if(kind==='std'){ if(v>0) PRICE[grp][name].std=v; else delete PRICE[grp][name].std; }
+      else {
+        const bucket = kind==='lot'?'lots':(kind==='roll'?'rolls':'sacks');
+        PRICE[grp][name][bucket]=PRICE[grp][name][bucket]||{};
+        if(v>0) PRICE[grp][name][bucket][key]=v; else delete PRICE[grp][name][bucket][key];
+      }
+    });
+    PRICE.gas=+$('prGas').value||0;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     2. ตั้งค่า
+     ═══════════════════════════════════════════════════════════════ */
+  function rSet(){
+    $('stSew').value = KSET.sewPerPiece||'';
+    $('stLaborDay').value = KSET.laborDaily||'';
+    $('stLaborHrs').value = KSET.laborHoursPerDay||'';
+    $('stLaborPc').value = KSET.laborPerPiece||'';
+    $('stElec').value = KSET.elecPerHour||'';
+    $('stShip').value = KSET.shipPerPack||'';
+    $('stHours').value = KSET.hoursOverride||'';
+    $('stMargin').value = (KSET.marginPct||KSET.marginPct===0)?KSET.marginPct:'';
+    $('stVat').value = (KSET.vatPct||KSET.vatPct===0)?KSET.vatPct:'';
+
+    const sew=KSET.sewBySize||{};
+    $('sewSizeRows').innerHTML = Object.keys(sew).length
+      ? Object.entries(sew).map(([k,v])=>'<div class="frow"><div style="flex:1">'+esc(k)+'</div><div style="width:110px;text-align:right">'+fmtBaht(v)+' บาท/ชิ้น</div><button class="x" data-sewdel="'+esc(k)+'">✕</button></div>').join('')
+      : '<div class="sumline" style="color:var(--muted)">ยังไม่ได้ตั้งรายไซซ์ — ใช้ค่ามาตรฐานด้านบนทุกไซซ์</div>';
+    $('sewSizeRows').querySelectorAll('[data-sewdel]').forEach(b=>b.onclick=async()=>{
+      const k=b.getAttribute('data-sewdel');
+      if(!await ask('ลบค่าเย็บไซซ์ '+k+'?','ไซซ์นี้จะกลับไปใช้ค่ามาตรฐานแทน')) return;
+      delete KSET.sewBySize[k]; await saveSet(); rSet(); toast('ลบแล้ว');
+    });
+
+    const fx=KSET.fixed||[];
+    $('fixedRows').innerHTML = fx.length
+      ? fx.map((f,i)=>'<div class="frow"><div style="flex:1">'+esc(f.name)+'</div><div style="width:130px;text-align:right">'+fmtBaht(f.baht)+' บาท/เดือน</div><button class="x" data-fixdel="'+i+'">✕</button></div>').join('')
+        + '<div class="frow" style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;"><div style="flex:1"><b>รวม</b></div><div style="width:130px;text-align:right"><b>'+fmtBaht(fx.reduce((s,f)=>s+(+f.baht||0),0))+' บาท/เดือน</b></div><div style="width:28px"></div></div>'
+      : '<div class="sumline" style="color:var(--muted)">ยังไม่มีรายการ</div>';
+    $('fixedRows').querySelectorAll('[data-fixdel]').forEach(b=>b.onclick=async()=>{
+      const i=+b.getAttribute('data-fixdel'); const f=KSET.fixed[i];
+      if(!await ask('ลบ "'+f.name+'" ?','')) return;
+      KSET.fixed.splice(i,1); await saveSet(); rSet(); toast('ลบแล้ว');
+    });
+
+    const hpm=hoursPerMonthNow();
+    const rate=COST.fixedPerHour(KSET.fixed,hpm);
+    const real=COST.hoursPerMonth(PROD.line);
+    $('fixedPreview').innerHTML = hpm>0
+      ? 'ชั่วโมงเดินเครื่อง <b>'+hpm+' ชม./เดือน</b>'+(KSET.hoursOverride>0?' (ตั้งเอง)':' (คำนวณจากยอดผลิตจริง)')+
+        ' → ค่าคงที่เฉลี่ย <b style="color:var(--accent2)">'+fmtBaht(rate)+' บาท/ชั่วโมง</b>'+
+        (KSET.hoursOverride>0&&real>0?'<br><span style="color:var(--muted)">ยอดผลิตจริงคำนวณได้ '+real+' ชม./เดือน</span>':'')
+      : '<span class="bdg warn">ยังไม่รู้ชั่วโมงเดินเครื่อง</span> ยังไม่มีข้อมูลการผลิตพอให้คำนวณ — กรอกเองไปก่อนได้';
+
+    const hr=(+KSET.laborHoursPerDay>0)?(+KSET.laborDaily||0)/(+KSET.laborHoursPerDay):0;
+    $('laborPreview').innerHTML = (hr||KSET.laborPerPiece)
+      ? 'คิดเป็น '+(hr?'<b>'+fmtBaht(hr)+' บาท/ชั่วโมง</b>':'')+(hr&&KSET.laborPerPiece?' + ':'')+
+        (KSET.laborPerPiece?'<b>'+fmtBaht(KSET.laborPerPiece)+' บาท/ชิ้น</b>':'')
+      : '<span style="color:var(--muted)">ยังไม่ได้ตั้งค่าแรง</span>';
+  }
+  /* พรีวิวต้องขยับตามที่พิมพ์ทันที ไม่ต้องรอกดบันทึก */
+  function liveSetPreview(){
+    const day=+$('stLaborDay').value||0, hrs=+$('stLaborHrs').value||0, pc=+$('stLaborPc').value||0;
+    const hr=hrs>0?day/hrs:0;
+    $('laborPreview').innerHTML = (hr||pc)
+      ? 'คิดเป็น '+(hr?'<b>'+fmtBaht(hr)+' บาท/ชั่วโมง</b>':'')+(hr&&pc?' + ':'')+(pc?'<b>'+fmtBaht(pc)+' บาท/ชิ้น</b>':'')
+      : '<span style="color:var(--muted)">ยังไม่ได้ตั้งค่าแรง</span>';
+    const ov=+$('stHours').value||0;
+    const hpm=ov>0?ov:COST.hoursPerMonth(PROD.line);
+    const rate=COST.fixedPerHour(KSET.fixed,hpm);
+    const real=COST.hoursPerMonth(PROD.line);
+    $('fixedPreview').innerHTML = hpm>0
+      ? 'ชั่วโมงเดินเครื่อง <b>'+hpm+' ชม./เดือน</b>'+(ov>0?' (ตั้งเอง)':' (คำนวณจากยอดผลิตจริง)')+
+        ' → ค่าคงที่เฉลี่ย <b style="color:var(--accent2)">'+fmtBaht(rate)+' บาท/ชั่วโมง</b>'+
+        (ov>0&&real>0?'<br><span style="color:var(--muted)">ยอดผลิตจริงคำนวณได้ '+real+' ชม./เดือน</span>':'')
+      : '<span class="bdg warn">ยังไม่รู้ชั่วโมงเดินเครื่อง</span> ยังไม่มีข้อมูลการผลิตพอให้คำนวณ — กรอกเองไปก่อนได้';
+  }
+  ['stLaborDay','stLaborHrs','stLaborPc','stHours'].forEach(id=>{
+    const el=$(id); if(el) el.addEventListener('input',liveSetPreview);
+  });
+
+  function collectSet(){
+    KSET.sewPerPiece=+$('stSew').value||0;
+    KSET.laborDaily=+$('stLaborDay').value||0;
+    KSET.laborHoursPerDay=+$('stLaborHrs').value||8;
+    KSET.laborPerPiece=+$('stLaborPc').value||0;
+    KSET.elecPerHour=+$('stElec').value||0;
+    KSET.shipPerPack=+$('stShip').value||0;
+    KSET.hoursOverride=+$('stHours').value||0;
+    KSET.marginPct=+$('stMargin').value||0;
+    KSET.vatPct=+$('stVat').value||0;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     3. ต้นทุนจริง
+     ═══════════════════════════════════════════════════════════════ */
+  function rJob(){
+    const jobs=jobsWithWork();
+    const sel=$('jobSel'); const prev=sel.value;
+    sel.innerHTML = jobs.length
+      ? jobs.slice().reverse().map(o=>'<option value="'+o.id+'">'+esc(orderLabel(o))+'</option>').join('')
+      : '<option value="">— ยังไม่มีงานที่บันทึกการผลิตไว้ —</option>';
+    if(prev && jobs.some(o=>o.id===prev)) sel.value=prev;
+    renderJobCost();
+  }
+  function renderJobCost(){
+    const id=$('jobSel').value;
+    if(!id){ $('jobMeta').textContent=''; $('jobStats').innerHTML=''; $('tJobBreak').innerHTML=''; $('tJobDetail').innerHTML='';
+      $('jobWarnCard').style.display='none'; return; }
+    const c=COST.jobCost(ctx(), id);
+    $('jobMeta').innerHTML='ผลิตแล้ว <b>'+c.packs+' แพ็ค</b> · <b>'+fmtInt(c.pieces)+' ชิ้น</b> · เดินเครื่องราว <b>'+c.hours+' ชม.</b>'+
+      (c.fiber.from==='wd'?'<br><span class="bdg warn">งานนี้ยังไม่มีบันทึกป้อนใยรายรอบ — ใช้ยอดเบิกใยแทน</span>':'');
+    renderJobDays(c);
+
+    $('jobStats').innerHTML =
+      '<div class="stat"><div class="v">'+fmtBaht(c.perPiece)+'</div><div class="l">บาท/ชิ้น</div></div>'+
+      '<div class="stat"><div class="v">'+fmtBaht(c.perPack)+'</div><div class="l">บาท/แพ็ค</div></div>'+
+      '<div class="stat"><div class="v">'+fmtBaht(c.total)+'</div><div class="l">ต้นทุนรวมทั้งงาน (บาท)</div></div>'+
+      '<div class="stat"><div class="v">'+fmtInt(c.pieces)+'</div><div class="l">ชิ้นที่ทำได้</div></div>';
+
+    const rows=[
+      ['ใย', c.fiber.kg+' กก.', c.fiber.baht],
+      ['ผ้าปลอก', c.fabric.pieces+' ชิ้น', c.fabric.baht],
+      ['ถุง', (c.bag.zip+c.bag.pack)+' ใบ', c.bag.baht],
+      ['ค่าจ้างเย็บ', c.sew.pieces+' ชิ้น', c.sew.baht],
+      ['ค่าแรงในโรง', '—', c.labor.baht],
+      ['แก๊ส', c.gas.tanks+' ถัง', c.gas.baht],
+      ['ค่าไฟ', c.hours+' ชม.', c.elec.baht],
+      ['ค่าส่ง', c.packs+' แพ็ค', c.ship.baht],
+      ['ค่าใช้จ่ายคงที่', c.hours+' ชม. × '+fmtBaht(c.fixed.perHour), c.fixed.baht]
+    ];
+    $('tJobBreak').innerHTML='<tr><th>รายการ</th><th>ปริมาณ</th><th style="text-align:right">บาท</th><th style="text-align:right">ต่อชิ้น</th><th style="text-align:right">%</th></tr>'+
+      rows.map(([a,b,v])=>'<tr><td>'+a+'</td><td style="color:#9fb0c0">'+b+'</td><td style="text-align:right">'+fmtBaht(v)+'</td><td style="text-align:right">'+
+        (c.pieces>0?fmtBaht(v/c.pieces):'—')+'</td><td style="text-align:right">'+(c.total>0?Math.round(v/c.total*100):0)+'%</td></tr>').join('')+
+      '<tr><td><b>รวม</b></td><td></td><td style="text-align:right"><b>'+fmtBaht(c.total)+'</b></td><td style="text-align:right"><b>'+fmtBaht(c.perPiece)+'</b></td><td style="text-align:right">100%</td></tr>';
+
+    $('tJobDetail').innerHTML = c.detail.length
+      ? '<tr><th>หมวด</th><th>รายการ</th><th>ปริมาณ</th><th style="text-align:right">ราคา/หน่วย</th><th style="text-align:right">บาท</th><th>ที่มาราคา</th></tr>'+
+        c.detail.map(d=>'<tr><td>'+esc(d.cat)+'</td><td>'+esc(d.what)+'</td><td>'+esc(d.qty)+'</td><td style="text-align:right">'+fmtBaht(d.unit)+'</td><td style="text-align:right">'+fmtBaht(d.baht)+'</td><td>'+srcBadge(d.src)+'</td></tr>').join('')
+      : '<tr><td class="empty">ยังไม่มีรายการเบิกของงานนี้</td></tr>';
+
+    if(c.missing.length){
+      $('jobWarnCard').style.display='';
+      $('jobWarn').innerHTML='ต้นทุนที่เห็นยัง<b>ต่ำกว่าความจริง</b> เพราะรายการพวกนี้ยังไม่มีราคา:<br>'+
+        c.missing.map(m=>'• '+esc(m)).join('<br>')+
+        '<br><br>ไปใส่ได้ที่หน้า <b>💰 ราคาของ</b>';
+    } else $('jobWarnCard').style.display='none';
+  }
+
+  function renderJobDays(c){
+    const sp=c.span;
+    if(!sp){
+      $('jobSpan').innerHTML='<span class="bdg warn">ยังไม่มีบันทึกท้ายไลน์ของงานนี้</span> ต้องมีการบันทึกแพ็คก่อน ถึงจะรู้วันเวลาที่ผลิตจริง';
+      $('tJobDays').innerHTML=''; return;
+    }
+    const opened=(c.order&&c.order.startedAt)?thDateTime(c.order.startedAt):'';
+    const done=(c.order&&c.order.finishedAt)?thDateTime(c.order.finishedAt):'';
+    $('jobSpan').innerHTML=
+      'ลงมือผลิตจริง <b style="color:var(--accent2)">'+thDateTime(sp.from)+'</b> → <b style="color:var(--accent2)">'+thDateTime(sp.to)+'</b>'+
+      ' · รวม <b>'+sp.days+' วัน</b> ที่มีการผลิต'+
+      (opened?'<br><span style="color:var(--muted)">เปิดออเดอร์ '+opened+(done?' · ปิดงาน '+done:'')+'</span>':'');
+    $('tJobDays').innerHTML='<tr><th>วันที่</th><th>เริ่ม</th><th>เลิก</th><th style="text-align:right">แพ็ค</th>'+
+      '<th style="text-align:right">ชิ้น</th><th style="text-align:right">ชม.เดินเครื่อง</th><th style="text-align:right">ชิ้น/ชม.</th></tr>'+
+      c.days.map(d=>'<tr><td>'+thDate(d.date)+' ('+thDow(d.date)+')</td><td>'+d.first+'</td><td>'+d.last+'</td>'+
+        '<td style="text-align:right">'+fmtInt(d.packs)+'</td><td style="text-align:right">'+fmtInt(d.pieces)+'</td>'+
+        '<td style="text-align:right">'+d.hours+'</td><td style="text-align:right" class="kn">'+(d.hours>0?r2(d.pieces/d.hours):'—')+'</td></tr>').join('')+
+      (c.days.length>1?'<tr><td><b>รวม</b></td><td></td><td></td><td style="text-align:right"><b>'+fmtInt(c.packs)+'</b></td>'+
+        '<td style="text-align:right"><b>'+fmtInt(c.pieces)+'</b></td><td style="text-align:right"><b>'+c.hours+'</b></td>'+
+        '<td style="text-align:right"><b>'+(c.hours>0?r2(c.pieces/c.hours):'—')+'</b></td></tr>':'');
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     4. ตีราคา
+     ═══════════════════════════════════════════════════════════════ */
+  function fillQuoteSelects(){
+    const opt=a=>'<option value="">— ไม่ใช้ —</option>'+a.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+    const keep=(id,html)=>{ const el=$(id), v=el.value; el.innerHTML=html; if(v&&[...el.options].some(o=>o.value===v)) el.value=v; };
+    keep('qFiber',opt(fiberNames())); keep('qFabric',opt(fabricNames()));
+    keep('qZip',opt(bagNames('zip'))); keep('qPack',opt(bagNames('pack')));
+  }
+  function quoteInputs(){
+    const type=$('qType').value;
+    const fName=$('qFiber').value;
+    const fp=fName?COST.fiberPricePerKg(PRICE,fName,null):{baht:0,src:'none'};
+    const zName=$('qZip').value, pName=$('qPack').value;
+    const zp=zName?COST.bagBahtPerPiece(PRICE,S.sackReceipts,'zip',zName,null):{baht:0,src:'none'};
+    const pp=pName?COST.bagBahtPerPiece(PRICE,S.sackReceipts,'pack',pName,null):{baht:0,src:'none'};
+    let fabBaht=+$('qFabBaht').value||0;
+    let fabSrc='set';
+    if(!fabBaht && $('qFabric').value){
+      const t=$('qFabric').value;
+      const b=(S.cutBatches||[]).filter(x=>x.fabricType===t)[0];
+      if(b){ const c=COST.fabricBahtPerPiece(PRICE,S.cutBatches,b.id); fabBaht=c.baht; fabSrc=c.src; }
+      else fabSrc='none';
+    }
+    const pieces=+$('qPieces').value||0;
+    let hours=+$('qHours').value||0;
+    const pph=COST.piecesPerHour(PROD.line);
+    if(!hours && pph>0 && pieces>0) hours=r2(pieces/pph);
+    return {
+      q:{ type, pieces, perPack:+$('qPerPack').value||0,
+          fiberKg:+$('qFiberKg').value||0, fiberBahtPerKg:fp.baht,
+          fabBahtPerPiece:fabBaht,
+          zipPerPack:+$('qZipN').value||0, zipBaht:zp.baht,
+          packPerPack:+$('qPackN').value||0, packBaht:pp.baht,
+          sewPerPiece:($('qSew').value!==''?+$('qSew').value:(+KSET.sewPerPiece||0)),
+          hours, marginPct:($('qMargin').value!==''?+$('qMargin').value:null) },
+      meta:{ fp, zp, pp, fabSrc, fabBaht, pph, fName, zName, pName }
+    };
+  }
+  function rQuote(){
+    const {q,meta}=quoteInputs();
+    $('qFabRow').style.display = q.type==='ใย' ? 'none' : '';
+    $('qFiberPrice').innerHTML = meta.fName
+      ? (meta.fp.baht ? 'ราคาใย <b>'+fmtBaht(meta.fp.baht)+' บาท/กก.</b> '+srcBadge(meta.fp.src)
+                      : '<span class="bdg bad">ยังไม่ได้ใส่ราคาใยตัวนี้</span> ไปใส่ที่หน้า 💰 ราคาของ')
+      : '<span style="color:var(--muted)">เลือกใยเพื่อดึงราคามาคิดให้</span>';
+    $('qFabPrice').innerHTML = q.type==='ใย' ? ''
+      : (meta.fabBaht ? 'ค่าผ้า <b>'+fmtBaht(meta.fabBaht)+' บาท/ชิ้น</b> '+srcBadge(meta.fabSrc)
+                      : '<span class="bdg warn">ยังไม่รู้ค่าผ้าต่อชิ้น</span> เลือกผ้าที่เคยตัดแล้ว หรือกรอกเอง');
+    $('qBagPrice').innerHTML = (meta.zName||meta.pName)
+      ? [meta.zName?'ถุงซิล <b>'+fmtBaht(meta.zp.baht)+' บาท/ใบ</b> '+srcBadge(meta.zp.src):'',
+         meta.pName?'ถุงแพ็ค <b>'+fmtBaht(meta.pp.baht)+' บาท/ใบ</b> '+srcBadge(meta.pp.src):''].filter(Boolean).join(' · ')
+      : '';
+    $('qSpeed').innerHTML = meta.pph>0
+      ? 'ความเร็วจริงจากงานที่ผ่านมา <b>'+meta.pph+' ชิ้น/ชั่วโมง</b>'+($('qHours').value===''&&q.hours?' → งานนี้น่าจะใช้ <b>'+q.hours+' ชม.</b>':'')
+      : '<span class="bdg warn">ยังไม่มีข้อมูลความเร็วการผลิต</span> กรอกชั่วโมงเองไปก่อน';
+
+    const K=Object.assign({}, KSET, {_hoursPerMonth:hoursPerMonthNow()});
+    const c=COST.quoteCost(q, K);
+    $('qStats').innerHTML =
+      '<div class="stat"><div class="v">'+fmtBaht(c.perPiece)+'</div><div class="l">ต้นทุน (บาท/ชิ้น)</div></div>'+
+      '<div class="stat"><div class="v" style="color:var(--green)">'+fmtBaht(c.sellPerPiece)+'</div><div class="l">ราคาเสนอ (บาท/ชิ้น) +'+c.marginPct+'%</div></div>'+
+      '<div class="stat"><div class="v">'+fmtBaht(c.sell)+'</div><div class="l">ยอดเสนอรวม (บาท)</div></div>'+
+      '<div class="stat"><div class="v" style="color:var(--green)">'+fmtBaht(c.profit)+'</div><div class="l">กำไรทั้งงาน (บาท)</div></div>';
+    const rows=[['ใย',c.fiber],['ผ้าปลอก',c.fabric],['ถุงซิล',c.zip],['ถุงแพ็ค',c.pack],
+                ['ค่าจ้างเย็บ',c.sew],['ค่าแรงในโรง',c.labor],['ค่าไฟ',c.elec],['ค่าส่ง',c.ship],['ค่าใช้จ่ายคงที่',c.fixed]];
+    $('tQuoteBreak').innerHTML='<tr><th>รายการ</th><th style="text-align:right">บาท</th><th style="text-align:right">ต่อชิ้น</th></tr>'+
+      rows.map(([a,v])=>'<tr><td>'+a+'</td><td style="text-align:right">'+fmtBaht(v)+'</td><td style="text-align:right">'+(c.pieces>0?fmtBaht(v/c.pieces):'—')+'</td></tr>').join('')+
+      '<tr><td><b>ต้นทุนรวม</b></td><td style="text-align:right"><b>'+fmtBaht(c.total)+'</b></td><td style="text-align:right"><b>'+fmtBaht(c.perPiece)+'</b></td></tr>'+
+      '<tr><td>บวกกำไร '+c.marginPct+'%</td><td style="text-align:right">'+fmtBaht(c.profit)+'</td><td style="text-align:right">'+(c.pieces>0?fmtBaht(c.profit/c.pieces):'—')+'</td></tr>'+
+      '<tr><td><b>ราคาเสนอ</b></td><td style="text-align:right"><b style="color:var(--green)">'+fmtBaht(c.sell)+'</b></td><td style="text-align:right"><b style="color:var(--green)">'+fmtBaht(c.sellPerPiece)+'</b></td></tr>'+
+      (c.vatPct>0?'<tr><td>รวม VAT '+c.vatPct+'%</td><td style="text-align:right">'+fmtBaht(c.sellVat)+'</td><td style="text-align:right">'+fmtBaht(c.sellVatPerPiece)+'</td></tr>':'');
+    $('qNote').innerHTML = c.pieces>0 ? 'คิดจาก '+fmtInt(c.pieces)+' ชิ้น = '+c.packs+' แพ็ค · เดินเครื่อง '+c.hours+' ชม.'
+                                      : '<span style="color:var(--muted)">กรอกจำนวนที่สั่งเพื่อคำนวณ</span>';
+    renderQuoteList();
+  }
+  function renderQuoteList(){
+    $('tQuotes').innerHTML = QUOTES.length
+      ? '<tr><th>วันที่</th><th>ลูกค้า</th><th>งาน</th><th style="text-align:right">ชิ้น</th><th style="text-align:right">ต้นทุน/ชิ้น</th><th style="text-align:right">เสนอ/ชิ้น</th><th></th></tr>'+
+        QUOTES.slice().reverse().map(q=>'<tr><td>'+thDate(q.time)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.code)+'</td>'+
+          '<td style="text-align:right">'+fmtInt(q.pieces)+'</td><td style="text-align:right">'+fmtBaht(q.perPiece)+'</td>'+
+          '<td style="text-align:right" class="kn">'+fmtBaht(q.sellPerPiece)+'</td><td><button class="x" data-qdel="'+q.id+'">✕</button></td></tr>').join('')
+      : '<tr><td class="empty">ยังไม่ได้เก็บใบตีราคาไว้</td></tr>';
+    $('tQuotes').querySelectorAll('[data-qdel]').forEach(b=>b.onclick=async()=>{
+      const id=b.getAttribute('data-qdel'); const q=QUOTES.find(x=>x.id===id);
+      if(!await ask('ลบใบตีราคานี้?', q?(q.customer+' — '+q.code):'')) return;
+      QUOTES=QUOTES.filter(x=>x.id!==id); await saveQuotes(); renderQuoteList(); toast('ลบแล้ว');
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     5. สรุป
+     ═══════════════════════════════════════════════════════════════ */
+  function rSum(){
+    const jobs=jobsWithWork();
+    const costs=jobs.map(o=>COST.jobCost(ctx(),o.id));
+    const totalBaht=r2(costs.reduce((s,c)=>s+c.total,0));
+    const totalPieces=costs.reduce((s,c)=>s+c.pieces,0);
+    const totalHours=r2(costs.reduce((s,c)=>s+c.hours,0));
+    $('sumStats').innerHTML=
+      '<div class="stat"><div class="v">'+fmtBaht(totalBaht)+'</div><div class="l">ต้นทุนรวมทุกงาน (บาท)</div></div>'+
+      '<div class="stat"><div class="v">'+(totalPieces>0?fmtBaht(totalBaht/totalPieces):'—')+'</div><div class="l">ต้นทุนเฉลี่ย (บาท/ชิ้น)</div></div>'+
+      '<div class="stat"><div class="v">'+fmtInt(totalPieces)+'</div><div class="l">ผลิตแล้วทั้งหมด (ชิ้น)</div></div>'+
+      '<div class="stat"><div class="v">'+totalHours+'</div><div class="l">ชั่วโมงเดินเครื่องรวม</div></div>';
+
+    $('tSumJobs').innerHTML = costs.length
+      ? '<tr><th>งาน</th><th>ผลิตจริง</th><th style="text-align:right">ชิ้น</th><th style="text-align:right">ต้นทุนรวม</th><th style="text-align:right">บาท/ชิ้น</th><th>ครบราคามั้ย</th></tr>'+
+        costs.slice().reverse().map(c=>'<tr><td>'+esc(orderLabel(c.order))+'</td>'+
+          '<td>'+(c.span?(thDate(c.span.from)+(thDate(c.span.to)!==thDate(c.span.from)?' – '+thDate(c.span.to):'')):'—')+'</td>'+
+          '<td style="text-align:right">'+fmtInt(c.pieces)+'</td>'+
+          '<td style="text-align:right">'+fmtBaht(c.total)+'</td><td style="text-align:right" class="kn">'+fmtBaht(c.perPiece)+'</td>'+
+          '<td>'+(c.missing.length?'<span class="bdg warn">ขาด '+c.missing.length+' รายการ</span>':'<span class="bdg ok">ครบ</span>')+'</td></tr>').join('')
+      : '<tr><td class="empty">ยังไม่มีงานที่บันทึกการผลิตไว้</td></tr>';
+
+    const pairs=[];
+    QUOTES.forEach(q=>{
+      const c=costs.find(x=>x.order && x.order.customer===q.customer && x.order.code===q.code);
+      if(c) pairs.push({q,c});
+    });
+    $('tCompare').innerHTML = pairs.length
+      ? '<tr><th>งาน</th><th style="text-align:right">ตีไว้/ชิ้น</th><th style="text-align:right">จริง/ชิ้น</th><th style="text-align:right">ต่าง</th><th></th></tr>'+
+        pairs.map(({q,c})=>{ const d=r2(c.perPiece-q.perPiece);
+          return '<tr><td>'+esc(q.customer)+' — '+esc(q.code)+'</td><td style="text-align:right">'+fmtBaht(q.perPiece)+'</td>'+
+            '<td style="text-align:right">'+fmtBaht(c.perPiece)+'</td><td style="text-align:right">'+(d>0?'+':'')+fmtBaht(d)+'</td>'+
+            '<td>'+(d>0.005?'<span class="bdg bad">จริงแพงกว่าที่ตีไว้</span>':(d<-0.005?'<span class="bdg ok">จริงถูกกว่า</span>':'<span class="bdg ok">ตรง</span>'))+'</td></tr>'; }).join('')
+      : '<tr><td class="empty">ยังไม่มีคู่ที่เทียบได้</td></tr>';
+    $('cmpNote').innerHTML = pairs.length ? '' : 'จับคู่อัตโนมัติเมื่อ<b>ชื่อลูกค้า</b>และ<b>ชื่องาน</b>ในใบตีราคาตรงกับออเดอร์ที่ทำจริง';
+
+    const byMonth={};
+    PROD.line.forEach(l=>{ const m=String(l.time||'').slice(0,7); if(!m) return;
+      byMonth[m]=byMonth[m]||{packs:0,pieces:0,rows:[]};
+      byMonth[m].packs++; byMonth[m].pieces+=(+l.piecesPerPack||0); byMonth[m].rows.push(l); });
+    const months=Object.keys(byMonth).sort().reverse();
+    $('tCapacity').innerHTML = months.length
+      ? '<tr><th>เดือน</th><th style="text-align:right">แพ็ค</th><th style="text-align:right">ชิ้น</th><th style="text-align:right">ชม.เดินเครื่อง</th><th style="text-align:right">ชิ้น/ชม.</th></tr>'+
+        months.map(m=>{ const v=byMonth[m]; const h=COST.machineHours(v.rows);
+          const th=(+m.slice(0,4)+543)+'-'+m.slice(5);
+          return '<tr><td>'+th+'</td><td style="text-align:right">'+fmtInt(v.packs)+'</td><td style="text-align:right">'+fmtInt(v.pieces)+'</td>'+
+            '<td style="text-align:right">'+h+'</td><td style="text-align:right" class="kn">'+(h>0?r2(v.pieces/h):'—')+'</td></tr>'; }).join('')
+      : '<tr><td class="empty">ยังไม่มีข้อมูลการผลิต</td></tr>';
+    const hpm=hoursPerMonthNow();
+    $('capNote').innerHTML = hpm>0
+      ? 'เฉลี่ยเดินเครื่อง <b>'+hpm+' ชม./เดือน</b> — ค่านี้คือตัวหารของค่าใช้จ่ายคงที่'+
+        (COST.piecesPerHour(PROD.line)>0?' · ความเร็วเฉลี่ย <b>'+COST.piecesPerHour(PROD.line)+' ชิ้น/ชม.</b>':'')
+      : '';
+
+    const prices=[];
+    fiberNames().forEach(n=>{ const p=COST.fiberPricePerKg(PRICE,n,null);
+      prices.push(['ใย',n,p.baht?fmtBaht(p.baht)+' บาท/กก.':'—',p.src]); });
+    fabricNames().forEach(n=>{ const b=(S.cutBatches||[]).filter(x=>x.fabricType===n)[0];
+      if(!b){ const p=COST.fabricPricePerRoll(PRICE,n,null);
+        prices.push(['ผ้า',n,p.baht?fmtBaht(p.baht)+' บาท/ม้วน':'—',p.src]); return; }
+      const c=COST.fabricBahtPerPiece(PRICE,S.cutBatches,b.id);
+      prices.push(['ผ้า',n,c.baht?fmtBaht(c.baht)+' บาท/ชิ้น':'—',c.src]); });
+    ['zip','pack'].forEach(k=>bagNames(k).forEach(n=>{
+      const c=COST.bagBahtPerPiece(PRICE,S.sackReceipts,k,n,null);
+      prices.push([k==='zip'?'ถุงซิล':'ถุงแพ็ค',n,c.baht?fmtBaht(c.baht)+' บาท/ใบ':'—',c.src]); }));
+    if(S.gasReceipts.length){ const gp=COST.gasPricePerTank(PRICE);
+      prices.push(['แก๊ส','ถังแก๊ส',gp.baht?fmtBaht(gp.baht)+' บาท/ถัง':'—',gp.src]); }
+    $('tPrices').innerHTML = prices.length
+      ? '<tr><th>ประเภท</th><th>ชื่อ</th><th>ราคาที่ใช้คิด</th><th>ที่มา</th></tr>'+
+        prices.map(p=>'<tr><td>'+p[0]+'</td><td>'+esc(p[1])+'</td><td class="kn">'+p[2]+'</td><td>'+srcBadge(p[3])+'</td></tr>').join('')
+      : '<tr><td class="empty">ยังไม่มีวัตถุดิบในระบบ</td></tr>';
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     NAV + BOOT
+     ═══════════════════════════════════════════════════════════════ */
+  function renderPanel(){
+    if(current==='price') rPrice();
+    else if(current==='set') rSet();
+    else if(current==='job') rJob();
+    else if(current==='quote'){ fillQuoteSelects(); rQuote(); }
+    else if(current==='sum') rSum();
+  }
+  function show(p){
+    current=p; formDirty=false;
+    document.querySelectorAll('.panel').forEach(el=>el.classList.remove('show'));
+    const el=$('p-'+p); if(el) el.classList.add('show');
+    document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on', b.getAttribute('data-p')===p));
+    renderPanel();
+    window.scrollTo(0,0);
+  }
+  document.querySelectorAll('.nb').forEach(b=>b.onclick=()=>show(b.getAttribute('data-p')));
+
+  $('btnSavePrice').onclick=async()=>{ collectPrice(); formDirty=false; await savePrice(); rPrice(); toast('บันทึกราคาแล้ว'); };
+  $('btnSaveSet').onclick=async()=>{ collectSet(); formDirty=false; await saveSet(); rSet(); toast('บันทึกการตั้งค่าแล้ว'); };
+  $('btnAddSewSize').onclick=async()=>{
+    const n=$('sewSizeName').value.trim(), v=+$('sewSizeBaht').value||0;
+    if(!n||!v){ toast('กรอกไซซ์และค่าเย็บ'); return; }
+    collectSet();
+    KSET.sewBySize=KSET.sewBySize||{}; KSET.sewBySize[n]=v;
+    $('sewSizeName').value=''; $('sewSizeBaht').value=''; formDirty=false;
+    await saveSet(); rSet(); toast('เพิ่มค่าเย็บไซซ์ '+n+' แล้ว');
+  };
+  $('btnAddFixed').onclick=async()=>{
+    const n=$('fixName').value.trim(), v=+$('fixBaht').value||0;
+    if(!n||!v){ toast('กรอกชื่อรายการและจำนวนเงิน'); return; }
+    collectSet();
+    KSET.fixed=KSET.fixed||[]; KSET.fixed.push({name:n,baht:v});
+    $('fixName').value=''; $('fixBaht').value=''; formDirty=false;
+    await saveSet(); rSet(); toast('เพิ่ม "'+n+'" แล้ว');
+  };
+  $('jobSel').onchange=renderJobCost;
+  ['qType','qPieces','qPerPack','qFiber','qFiberKg','qFabric','qFabBaht','qZip','qZipN','qPack','qPackN','qSew','qHours','qMargin']
+    .forEach(id=>{ const el=$(id); if(el){ el.addEventListener('input',rQuote); el.addEventListener('change',rQuote); } });
+  $('btnSaveQuote').onclick=async()=>{
+    const {q}=quoteInputs();
+    if(!q.pieces){ toast('กรอกจำนวนที่สั่งก่อน'); return; }
+    const cust=$('qCust').value.trim(), code=$('qCode').value.trim();
+    if(!cust||!code){ toast('กรอกชื่อลูกค้าและชื่องาน'); return; }
+    const c=COST.quoteCost(q, Object.assign({},KSET,{_hoursPerMonth:hoursPerMonthNow()}));
+    QUOTES.push({ id:uid(), time:localISO(), customer:cust, code:code, type:q.type,
+      pieces:c.pieces, packs:c.packs, hours:c.hours,
+      total:c.total, perPiece:c.perPiece, marginPct:c.marginPct, sell:c.sell, sellPerPiece:c.sellPerPiece, input:q });
+    await saveQuotes(); renderQuoteList();
+    toast('เก็บใบตีราคาแล้ว — '+cust+' '+code);
+  };
+
+  let pollMs=3000, syncBusy=false;
+  async function syncNow(force){
+    if(syncBusy) return; syncBusy=true;
+    try{
+      const h=await readAll();
+      pollMs=3000;
+      if(h!==lastHash || force){ lastHash=h; if(!formDirty) renderPanel(); }
+    }catch(e){ pollMs=Math.min(30000,pollMs*2); }
+    syncBusy=false;
+  }
+  (function loop(){ setTimeout(()=>{ syncNow().then(loop); }, pollMs); })();
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ pollMs=3000; syncNow(true); } });
+  $('saveState').onclick=()=>{ if(storeDown||Object.keys(pending).length){ Object.keys(pending).forEach(k=>flush(k)); toast('กำลังลองบันทึกใหม่…'); } };
+
+  function tick(){
+    const d=new Date();
+    const th=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'][d.getDay()];
+    const mo=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][d.getMonth()];
+    const p=n=>String(n).padStart(2,'0');
+    $('clock').textContent='วัน'+th+'ที่ '+d.getDate()+' '+mo+' พ.ศ. '+(d.getFullYear()+543)+' · '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+  }
+  tick(); setInterval(tick,1000);
+
+  (async function init(){
+    document.title='ต้นทุน & ตีราคา — วินโพลีดีไซน์';
+    lastHash=await readAll();
+    if(!hasStore){ storeDown=true; setSaveState('bad','ไม่รองรับ'); } else setSaveState('ok');
+    show('price');
+  })();
+})();
+</script>
+
+</body>
+</html>
