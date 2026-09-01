@@ -197,6 +197,7 @@
           <div><label>ประเภทสินค้า</label><select id="nType">
             <option value="ใย">ใย (แผ่น/ม้วน)</option>
             <option value="หมอน">หมอน</option>
+            <option value="ปิกนิก">ปิกนิก (แพ็คใยแผ่นที่ผลิตไว้)</option>
             <option value="อื่นๆ">อื่นๆ</option>
           </select></div>
           <div><label>จำนวนที่ลูกค้าสั่ง (แพ็ค)</label><input id="nPacks" type="number" inputmode="numeric" placeholder="500"></div>
@@ -306,6 +307,19 @@
         <div class="sumline" id="gasAvailInfo"></div>
         <button class="btn w" id="btnGasSwap">🔥 เปลี่ยนถังใหม่ 2 ใบ</button>
         <div class="scr" style="margin-top:11px;"><table id="tGasSwap"></table></div>
+      </div>
+      <div class="card" id="cardSheet" style="display:none;">
+        <h3>🧺 เบิกใยแผ่นมาแพ็ค (งานปิกนิก)</h3>
+        <p class="sumline">งานนี้ไม่ได้ผลิตใยใหม่ — ยกใยแผ่นที่ผลิตเสร็จแล้วมาแพ็ค
+          เบิกแล้วยอดสินค้าใยแผ่นในแอพสต๊อกจะลดทันที ไม่ต้องไปปรับยอดเอง</p>
+        <div class="sumline" id="sheetLineInfo"></div>
+        <div class="rf" style="margin-top:8px;">
+          <div><label>เอาใยแผ่นจากงานไหน</label><select id="swSrc"></select></div>
+          <div><label>เบิกกี่แผ่น</label><input id="swQty" type="number" inputmode="numeric" placeholder="เช่น 50"></div>
+        </div>
+        <div class="sumline" id="swPreview"></div>
+        <button class="btn w" id="btnSheetWd">🧺 เบิกใยแผ่นมาที่ไลน์</button>
+        <div class="scr" style="margin-top:11px;"><table id="tSheetWd"></table></div>
       </div>
       <div class="card" id="cardSpec">
         <div id="specForm"></div>
@@ -939,6 +953,34 @@ window.WPDAUTH = {
         {maxPct:null, color:'#e5595f', label:'เกินเกณฑ์'},
       ];
     },
+    /* ════ งานปิกนิก: ใยแผ่นที่ผลิตเสร็จแล้ว = วัตถุดิบของงานถัดไป ════
+       ยอดที่เบิกมาแพ็คได้ = ผลิตได้ − ส่งลูกค้าแล้ว − เบิกไปแพ็คแล้ว ± ปรับยอด */
+    sheetAvailable(orders, line, shipments, adjustments, sheetWd){
+      const produced={};
+      (line||[]).forEach(l=>{ produced[l.orderId]=(produced[l.orderId]||0)+1; });
+      return (orders||[]).filter(o=>(o.productType||'ใย')==='ใย').map(o=>{
+        const made=produced[o.id]||0;
+        const shipped=(shipments||[]).filter(s=>s.orderId===o.id).reduce((a,b)=>a+(+b.qty||0),0);
+        const adj=(adjustments||[]).filter(a=>a.orderId===o.id).reduce((a,b)=>a+(+b.delta||0),0);
+        const packed=(sheetWd||[]).filter(w=>w.srcOrderId===o.id).reduce((a,b)=>a+(+b.qty||0),0);
+        return { orderId:o.id, customer:o.customer, code:o.code, produced:made, shipped:r3(shipped),
+                 packed:r3(packed), adjusted:r3(adj), available:r3(made-shipped-packed+adj) };
+      }).filter(x=>x.produced>0 || x.packed>0 || x.adjusted!==0);
+    },
+    /* ใยแผ่นที่ยกมากองที่ไลน์แล้ว รอแพ็ค — เบิกแล้วยังไม่ได้ใช้ (ใช้ก้อนเก่าก่อน) */
+    sheetAtLine(sheetWd, sheetUse, orderId){
+      const wd=(sheetWd||[]).filter(w=>w.orderId===orderId).slice()
+        .sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+      return wd.map(w=>{
+        const used=(sheetUse||[]).filter(u=>u.wdId===w.id).reduce((a,b)=>a+(+b.qty||0),0);
+        return { wdId:w.id, srcOrderId:w.srcOrderId, qty:+w.qty||0, used:r3(used),
+                 remaining:r3((+w.qty||0)-used), time:w.time };
+      }).filter(x=>x.remaining>0.0000001);
+    },
+    sheetLineTotal(sheetWd, sheetUse, orderId){
+      return r3(CALC.sheetAtLine(sheetWd,sheetUse,orderId).reduce((a,b)=>a+b.remaining,0));
+    },
+
     // ---------- ถังแก๊ส ----------
     gasStatus(gasReceipts, gasSwaps){
       const usedNos=new Set();
@@ -1076,7 +1118,8 @@ window.WPDAUTH = {
   const pending={}, inflight={};
   function snapshot(k){
     if(k==='v3_orders') return {orders:S.orders,activeId:S.activeId,activeFeedId:S.activeFeedId,fiberMaster:S.fiberMaster||[]};
-    if(k==='v3_feed')   return {feed:S.feed,wd:S.wd,use:S.use,fabricWd:S.fabricWd,bagWd:S.bagWd,bagUse:S.bagUse,gasSwaps:S.gasSwaps};
+    if(k==='v3_feed')   return {feed:S.feed,wd:S.wd,use:S.use,fabricWd:S.fabricWd,bagWd:S.bagWd,bagUse:S.bagUse,gasSwaps:S.gasSwaps,
+                                sheetWd:S.sheetWd||[],sheetUse:S.sheetUse||[]};
     if(k==='v3_line')   return {line:S.line,scrap:S.scrap,breaks:S.breaks};
     return S.settings;
   }
@@ -1138,13 +1181,16 @@ window.WPDAUTH = {
   let STOCKFABRIC = { types:[], sizes:[], batches:[] };   // ชนิดผ้า/ไซซ์/สถานะถุงตัด อ่านจากแอพสต๊อก
   let STOCKBAG = { zip:{}, pack:{}, sacks:[] };   // ชื่อถุง -> รายละเอียดล่าสุด, sacks = สถานะกระสอบทั้งหมด อ่านจากแอพสต๊อก (v3s_bag)
   let STOCKGAS = [];   // สถานะถังแก๊สทั้งหมด อ่านจากแอพสต๊อก (v3s_gas)
+  /* งานปิกนิก: เอา "ใยแผ่นที่ผลิตเสร็จแล้ว" มาแพ็คต่อ จึงต้องรู้ยอดสินค้าสำเร็จรูปด้วย */
+  let STOCKFIN = { shipments:[], finAdjustments:[] };
   async function readAll(){
-    const [a,b,c,d,sf,sa,sb,sg] = await Promise.all([rawGet('v3_orders'),rawGet('v3_feed'),rawGet('v3_line'),rawGet('v3_set'),
-      rawGet('v3s_fiber'),rawGet('v3s_fabric'),rawGet('v3s_bag'),rawGet('v3s_gas')]);
-    const hash = [a,b,c,d,sf,sa,sb,sg].map(x=>x||'').join('|');
+    const [a,b,c,d,sf,sa,sb,sg,sn] = await Promise.all([rawGet('v3_orders'),rawGet('v3_feed'),rawGet('v3_line'),rawGet('v3_set'),
+      rawGet('v3s_fiber'),rawGet('v3s_fabric'),rawGet('v3s_bag'),rawGet('v3s_gas'),rawGet('v3s_fin')]);
+    const hash = [a,b,c,d,sf,sa,sb,sg,sn].map(x=>x||'').join('|');
     const parse = (s,f)=>{ try{ return s?JSON.parse(s):f; }catch(e){ return f; } };
     const A=parse(a,null), B=parse(b,{}), C=parse(c,{}), D=parse(d,null), SF=parse(sf,{receipts:[],baleUsage:[]}),
-      SA=parse(sa,{receipts:[],cuts:[],cutBatches:[],sewSent:[],sewReturns:[]}), SB=parse(sb,{receipts:[]}), SG=parse(sg,{receipts:[]});
+      SA=parse(sa,{receipts:[],cuts:[],cutBatches:[],sewSent:[],sewReturns:[]}), SB=parse(sb,{receipts:[]}), SG=parse(sg,{receipts:[]}),
+      SN=parse(sn,{});
     if (A){ S.orders=A.orders||[]; S.activeId=A.activeId||null; S.activeFeedId=A.activeFeedId||null; S.fiberMaster=A.fiberMaster||[]; }
     else if (!S.orders.length){
       S.orders=[{ id:uid(), customer:'ทรัพย์รุ่งเรือง', code:'ใย 300*34*46', orderedPacks:0,
@@ -1155,6 +1201,7 @@ window.WPDAUTH = {
       await saveOrders();
     }
     S.feed=B.feed||[]; S.wd=B.wd||[]; S.use=B.use||[]; S.fabricWd=B.fabricWd||[]; S.bagWd=B.bagWd||[]; S.bagUse=B.bagUse||[]; S.gasSwaps=B.gasSwaps||[]; S.line=C.line||[]; S.scrap=C.scrap||[]; S.breaks=C.breaks||[];
+    S.sheetWd=B.sheetWd||[]; S.sheetUse=B.sheetUse||[];
     if (D) S.settings=D;
     STOCKFIBER = {};
     (SF.receipts||[]).forEach(r=>{ (STOCKFIBER[r.fiberName]=STOCKFIBER[r.fiberName]||[]).push({lotNo:r.lotNo,kg:r.kg,time:r.time,baleCount:r.baleCount}); });
@@ -1178,6 +1225,7 @@ window.WPDAUTH = {
     STOCKBAG = { zip:{}, pack:{}, sacks, receipts:(SB.receipts||[]) };
     sacks.forEach(s=>{ const bucket=STOCKBAG[s.kind]; if(!bucket) return; bucket[s.name]=bucket[s.name]||{sizes:new Set(),lastWeightPerBag:0}; bucket[s.name].sizes.add(s.size); bucket[s.name].lastWeightPerBag=s.weightPerBag; });
     STOCKGAS = CALC.gasStatus(SG.receipts||[], S.gasSwaps);
+    STOCKFIN = { shipments:SN.shipments||[], finAdjustments:SN.finAdjustments||[] };
     return hash;
   }
 
@@ -1217,6 +1265,18 @@ window.WPDAUTH = {
       openOv('ovConfirm');
       const done=v=>{ closeOv('ovConfirm'); $('cfYes').onclick=null; $('cfNo').onclick=null; res(v); };
       $('cfYes').onclick=()=>done(true); $('cfNo').onclick=()=>done(false);
+    });
+  }
+  function info(title,msg){
+    return new Promise(res=>{
+      $('cfTitle').textContent=title; $('cfMsg').textContent=msg||'';
+      const no=$('cfNo'), yes=$('cfYes');
+      const prevNo=no.style.display, prevTxt=yes.textContent;
+      no.style.display='none'; yes.textContent='ตกลง';
+      openOv('ovConfirm');
+      const done=()=>{ closeOv('ovConfirm'); no.style.display=prevNo; yes.textContent=prevTxt;
+        yes.onclick=null; no.onclick=null; res(true); };
+      yes.onclick=done;
     });
   }
   function typing(){ const a=document.activeElement;
@@ -1741,6 +1801,30 @@ window.WPDAUTH = {
       refreshGasUI(); toast('ลบแล้ว');
     });
   }
+  ['swSrc','swQty'].forEach(id=>{ const e=$(id); if(e){ e.addEventListener('input',updateSwPreview); e.addEventListener('change',updateSwPreview); } });
+  if($('btnSheetWd')) $('btnSheetWd').onclick=async()=>{
+    const o=active();
+    if(!isPicnic(o)){ toast('งานนี้ไม่ใช่งานปิกนิก'); return; }
+    const src=$('swSrc').value, qty=+$('swQty').value||0;
+    if(!src){ toast('เลือกงานใยแผ่นที่จะเอามาแพ็คก่อน'); return; }
+    if(!qty||qty<=0){ toast('กรอกจำนวนแผ่นที่จะเบิก'); return; }
+    const a=sheetAvail().find(x=>x.orderId===src);
+    if(!a){ toast('ไม่พบงานใยแผ่นนั้น'); return; }
+    if(qty>a.available){
+      await info('เบิกเกินที่มีในสต๊อก',
+        a.customer+' — '+a.code+'\nเหลือให้เบิกได้ '+a.available+' แผ่น แต่กรอกไว้ '+qty+' แผ่น\n\nลดจำนวนลง หรือไปผลิตใยแผ่นเพิ่มก่อน');
+      return;
+    }
+    if(!await ask('เบิกใยแผ่น '+qty+' แผ่นมาที่ไลน์?',
+      'จาก: '+a.customer+' — '+a.code+'\nเบิก: '+qty+' แผ่น\nเหลือในสต๊อกหลังเบิก: '+r3(a.available-qty)+' แผ่น\n\nยอดสินค้าใยแผ่นในแอพสต๊อกจะลดทันที')) return;
+    S.sheetWd=S.sheetWd||[];
+    S.sheetWd.push({ id:uid(), time:localISO(), orderId:o.id, srcOrderId:src, qty:r3(qty) });
+    await saveFeed();
+    $('swQty').value='';
+    refreshSheetUI();
+    toast('เบิกใยแผ่นมาที่ไลน์แล้ว '+qty+' แผ่น — ที่ไลน์เหลือ '+CALC.sheetLineTotal(S.sheetWd,S.sheetUse,o.id)+' แผ่น');
+  };
+
   if($('btnGasSwap')) $('btnGasSwap').onclick=async()=>{
     const avail=STOCKGAS.filter(g=>!g.used).sort((a,b)=>a.gasNo-b.gasNo).slice(0,2);
     if(avail.length<2){ toast('ถังพร้อมใช้เหลือไม่ถึง 2 ถัง — ไปรับเข้าถังแก๊สที่แอพสต๊อกก่อน'); return; }
@@ -2085,12 +2169,83 @@ window.WPDAUTH = {
 
   /* ---------- 4. LINE ---------- */
   let lastLineOrder='__none__';
+  /* ════════ งานปิกนิก — เบิกใยแผ่นที่ผลิตไว้มาแพ็คต่อ ════════ */
+  const isPicnic = o => !!o && (o.productType||'')==='ปิกนิก';
+  function srcLabel(id){ const o=(S.orders||[]).find(x=>x.id===id); return o?(o.customer+' — '+o.code):'(งานถูกลบแล้ว)'; }
+  function sheetAvail(){
+    return CALC.sheetAvailable(S.orders, S.line, STOCKFIN.shipments, STOCKFIN.finAdjustments, S.sheetWd||[]);
+  }
+  function refreshSheetUI(){
+    const o=active(), card=$('cardSheet');
+    if(!card) return;
+    card.style.display = isPicnic(o) ? '' : 'none';
+    if(!isPicnic(o)) return;
+
+    const avail=sheetAvail().filter(x=>x.available>0.0000001);
+    const sel=$('swSrc'), prev=sel.value;
+    sel.innerHTML='<option value="">— เลือกงานใยแผ่นที่จะเอามาแพ็ค —</option>'+
+      avail.map(a=>'<option value="'+a.orderId+'">'+esc(a.customer+' — '+a.code)+' · เหลือ '+a.available+' แผ่น</option>').join('');
+    if(prev && avail.some(a=>a.orderId===prev)) sel.value=prev;
+
+    const atLine=CALC.sheetAtLine(S.sheetWd,S.sheetUse,o.id);
+    const total=CALC.sheetLineTotal(S.sheetWd,S.sheetUse,o.id);
+    $('sheetLineInfo').innerHTML = total>0
+      ? 'ที่ไลน์มีใยแผ่นรอแพ็คอยู่ <b style="color:var(--accent2)">'+total+' แผ่น</b>'+
+        ' — แพ็คได้อีก '+total+' ชิ้น'
+      : (avail.length
+          ? '<span class="bdg warn">ยังไม่มีใยแผ่นที่ไลน์</span> เลือกงานแล้วกดเบิกก่อน ถึงจะแพ็คได้'
+          : '<span class="bdg bad">ไม่มีใยแผ่นเหลือให้เบิกเลย</span> ต้องผลิตใยแผ่นก่อน หรือของถูกส่งลูกค้าไปหมดแล้ว');
+
+    $('tSheetWd').innerHTML = atLine.length
+      ? '<tr><th>เบิกเมื่อ</th><th>มาจากงาน</th><th style="text-align:right">เบิกมา</th><th style="text-align:right">ใช้ไป</th><th style="text-align:right">เหลือที่ไลน์</th></tr>'+
+        atLine.map(x=>'<tr><td>'+thDate(x.time)+' '+String(x.time).slice(11,16)+'</td><td>'+esc(srcLabel(x.srcOrderId))+'</td>'+
+          '<td style="text-align:right">'+x.qty+'</td><td style="text-align:right">'+x.used+'</td>'+
+          '<td style="text-align:right" class="kn">'+x.remaining+'</td></tr>').join('')
+      : '';
+    updateSwPreview();
+  }
+  function updateSwPreview(){
+    const el=$('swPreview'); if(!el) return;
+    const id=$('swSrc')?$('swSrc').value:'', q=+($('swQty')?$('swQty').value:0)||0;
+    if(!id){ el.innerHTML=''; return; }
+    const a=sheetAvail().find(x=>x.orderId===id);
+    if(!a){ el.innerHTML=''; return; }
+    el.innerHTML = q>0
+      ? (q>a.available
+          ? '<span class="bdg bad">เบิกเกินที่มี</span> งานนี้เหลือ '+a.available+' แผ่น แต่กรอก '+q+' แผ่น'
+          : 'จะเบิก <b style="color:var(--accent2)">'+q+' แผ่น</b> จาก '+esc(a.customer+' — '+a.code)+
+            ' · เหลือในสต๊อกอีก '+r3(a.available-q)+' แผ่น')
+      : 'งานนี้ผลิตได้ '+a.produced+' · ส่งแล้ว '+a.shipped+' · เบิกไปแพ็คแล้ว '+a.packed+' → <b>เหลือ '+a.available+' แผ่น</b>';
+  }
+
+  /* หักใยแผ่นตอนบันทึกแพ็ค — 1 แพ็ค = 1 แผ่น ใช้ที่เบิกมาก่อนก่อน */
+  function autoUseSheet(o, lineId){
+    if(!isPicnic(o)) return null;
+    S.sheetUse=S.sheetUse||[];
+    const need=1;
+    const q=CALC.sheetAtLine(S.sheetWd,S.sheetUse,o.id);
+    if(!q.length) return { short:'ไม่มีใยแผ่นที่ไลน์ — ต้องกดเบิกก่อน' };
+    let left=need;
+    for(const b of q){
+      if(left<=0) break;
+      const take=Math.min(b.remaining, left);
+      S.sheetUse.push({ id:uid(), time:localISO(), orderId:o.id, lineId:lineId||null,
+        wdId:b.wdId, srcOrderId:b.srcOrderId, qty:r3(take) });
+      left=r3(left-take);
+    }
+    const rest=CALC.sheetLineTotal(S.sheetWd,S.sheetUse,o.id);
+    return left>0.0000001
+      ? { short:'ใยแผ่นที่ไลน์ขาดอีก '+left+' แผ่น — เบิกเพิ่มก่อน', remaining:rest }
+      : { msg:'ใยแผ่นที่ไลน์เหลือ '+rest+' แผ่น', remaining:rest };
+  }
+
   function rLine(force){
     const o=active(), t=todayStr();
     if((o?o.id:null)!==lastLineOrder){ lastLineOrder=o?o.id:null; specOpen=null; }
     if($('fwFabSel')) refreshFwSelects();
     if($('bwKindSel')){ refreshBwSelects(); refreshBwSackOptions(); }
     if($('gasAvailInfo')) refreshGasUI();
+    if($('cardSheet')) refreshSheetUI();
     $('lineInfo').innerHTML=o
       ? '<div class="sumline">ออเดอร์: <b style="color:var(--accent2)" class="kn">'+esc(o.customer)+' — '+esc(o.code)+
         '</b> <span class="bdg ok">'+esc(o.productType||'ใย')+'</span></div>'
@@ -2223,7 +2378,9 @@ window.WPDAUTH = {
     const open = specOpen===null ? !isSet : specOpen;
     card.classList.toggle('need', !isSet);
 
-    const isPillow = o.productType==='หมอน';
+    const _isPicnic = o.productType==='ปิกนิก';
+    /* ปิกนิกใช้ผ้า+ถุงแพ็คเหมือนหมอน ต่างแค่ใยมาจากใยแผ่นสำเร็จ ไม่ได้ป้อนใยดิบ */
+    const isPillow = (o.productType==='หมอน' || _isPicnic);
     const zipNDefault = (sp.zipPerPack!=null&&sp.zipPerPack!=='') ? sp.zipPerPack
       : ((sp.bagPerPiece ? (+sp.piecesPerPack||0) : 1) + (sp.hasBag2 ? (sp.bagPerPiece ? (+sp.piecesPerPack||0) : 1) : 0)) || '';
     const packNDefault = (sp.packPerPack!=null&&sp.packPerPack!=='') ? sp.packPerPack : ((+sp.packBagWeight||0)>0?1:1);
@@ -2250,7 +2407,8 @@ window.WPDAUTH = {
     }
 
     f.innerHTML='<h3>'+(isSet?'แก้ไขน้ำหนัก Standard':'① ตั้งค่าน้ำหนัก Standard ก่อนเริ่มบันทึก')+'</h3>'+
-      '<div class="rf"><div><label>'+(isPillow?'น้ำหนักหมอนต่อชิ้น (กก.) — ผ้า + ใย':'น้ำหนักที่ต้องการต่อชิ้น (กก.)')+'</label>'+
+      '<div class="rf"><div><label>'+(_isPicnic?'น้ำหนักปิกนิกต่อชิ้น (กก.) — ใยแผ่น + ผ้า':
+        (isPillow?'น้ำหนักหมอนต่อชิ้น (กก.) — ผ้า + ใย':'น้ำหนักที่ต้องการต่อชิ้น (กก.)'))+'</label>'+
       '<input id="spW" type="number" inputmode="decimal" step="0.001" value="'+(sp.weightPerPiece||'')+'"></div>'+
       '<div><label>จำนวนชิ้นต่อแพ็ค</label><input id="spN" type="number" inputmode="numeric" value="'+(sp.piecesPerPack||'')+'"></div></div>'+
       (isPillow ? (
@@ -2268,6 +2426,7 @@ window.WPDAUTH = {
         '<div></div></div>'+
         '<div class="sumline" style="margin-top:2px;">น้ำหนักถุงซิลรวม = น้ำหนักต่อใบ × จำนวนใบต่อแพ็ค — ระบบบวกเข้า Standard ให้เอง</div>'+
         (legacyBag2Note||'')+
+        (_isPicnic?'<div class="sumline" style="margin-top:14px; color:var(--accent2);">งานปิกนิก 1 แพ็ค = 1 ชิ้น — ใช้ใยแผ่น 1 แผ่น + ผ้า 1 ชิ้น + ถุงแพ็ค 1 ใบ<br>เลือกถุงแพ็ค<b>ไซซ์ให้ตรงกับขนาดใยแผ่น</b> (3F / 3.5F / 5F / 6F)</div>':'')+
         '<div class="sumline" style="margin-top:14px; font-weight:600;">ถุงแพ็ค (ถุงใหญ่ห่อทั้งแพ็คอีกชั้น)</div>'+
         '<div class="rf"><div><label>ใช้ถุงแพ็คอะไร</label>'+
         '<input id="spPackBag" list="dlBagPack" value="'+esc(sp.packBagName||'')+'" placeholder="เช่น ถุงแพ็คใหญ่">'+
@@ -2581,6 +2740,8 @@ window.WPDAUTH = {
       note:note, gapMinutes:gapMin||null,
       gapReason:gapReason||null, isDowntime:!!flagged });
     const _cut=autoCutBags(o,_lineId);
+    const _sheet=autoUseSheet(o,_lineId);
+    if(_sheet){ saveFeed(); }
     $('lineNote').value=''; $('actW').value=''; $('actPc').value=''; $('actHint').innerHTML='';
     $('bagNo').value=''; lastPackAt=localISO(); idleNotified=false;
     if(_cut){ saveFeed(); }
@@ -2797,11 +2958,19 @@ window.WPDAUTH = {
     return { msgs, shorts, switched, needWd };
   }
 
-  function startPack(actual,actualPc){
+  async function startPack(actual,actualPc){
     const o=active();
     if(!o){ toast('เลือกออเดอร์ก่อน'); return; }
     const std=CALC.stdPerPack(o.spec);
     if(!std){ toast('ตั้งค่าน้ำหนัก Standard ก่อน'); return; }
+    if(isPicnic(o)){
+      const left=CALC.sheetLineTotal(S.sheetWd,S.sheetUse,o.id);
+      if(left<1){
+        await info('ยังไม่มีใยแผ่นที่ไลน์',
+          'งานปิกนิกต้องใช้ใยแผ่น 1 แผ่นต่อ 1 ชิ้น แต่ที่ไลน์เหลือ '+left+' แผ่น\n\nกดเบิกใยแผ่นมาที่ไลน์ก่อน แล้วค่อยบันทึกแพ็ค');
+        return;
+      }
+    }
     const prev=S.line.filter(l=>l.orderId===o.id).sort((a,b)=>a.time<b.time?-1:1).pop();
     const now=localISO();
     const gap=prev?Math.max(0,minsBetween(now,prev.time)-breakOverlapMinutes(prev.time,now)):null;

@@ -908,12 +908,17 @@ window.WPDAUTH = {
             .reduce((a,s)=>a+CALC.sackPieces(Math.max(0,s.remainingKg), s.weightPerBag),0)};
       });
     },
-    finStock(producedByOrder, shipments, adjustments){
-      const m={};
-      Object.entries(producedByOrder||{}).forEach(([id,qty])=>{ m[id]=m[id]||{produced:0,shipped:0,adjusted:0}; m[id].produced=qty; });
-      (shipments||[]).forEach(s=>{ m[s.orderId]=m[s.orderId]||{produced:0,shipped:0,adjusted:0}; m[s.orderId].shipped=r2(m[s.orderId].shipped+(+s.qty||0)); });
-      (adjustments||[]).filter(a=>a.orderId).forEach(a=>{ m[a.orderId]=m[a.orderId]||{produced:0,shipped:0,adjusted:0}; m[a.orderId].adjusted=r2(m[a.orderId].adjusted+(+a.delta||0)); });
-      return Object.entries(m).map(([orderId,v])=>({ orderId, produced:v.produced, shipped:v.shipped, adjusted:v.adjusted, stock:r2(v.produced-v.shipped+v.adjusted) }));
+    /* สินค้าสำเร็จรูปออกจากคลังได้ 2 ทาง — ส่งให้ลูกค้า กับ เบิกไปแพ็คต่อเป็นสินค้าอีกตัว
+       (เช่น ใยแผ่นถูกเบิกไปแพ็คปิกนิก) ถ้าไม่หักทางที่ 2 ยอดจะค้างทั้งที่ของออกจากคลังไปแล้ว */
+    finStock(producedByOrder, shipments, adjustments, sheetWd){
+      const m={}, blank=()=>({produced:0,shipped:0,adjusted:0,packed:0});
+      Object.entries(producedByOrder||{}).forEach(([id,qty])=>{ m[id]=m[id]||blank(); m[id].produced=qty; });
+      (shipments||[]).forEach(s=>{ m[s.orderId]=m[s.orderId]||blank(); m[s.orderId].shipped=r2(m[s.orderId].shipped+(+s.qty||0)); });
+      (adjustments||[]).filter(a=>a.orderId).forEach(a=>{ m[a.orderId]=m[a.orderId]||blank(); m[a.orderId].adjusted=r2(m[a.orderId].adjusted+(+a.delta||0)); });
+      (sheetWd||[]).forEach(w=>{ if(!w.srcOrderId) return; m[w.srcOrderId]=m[w.srcOrderId]||blank();
+        m[w.srcOrderId].packed=r2(m[w.srcOrderId].packed+(+w.qty||0)); });
+      return Object.entries(m).map(([orderId,v])=>({ orderId, produced:v.produced, shipped:v.shipped,
+        adjusted:v.adjusted, packed:v.packed, stock:r2(v.produced-v.shipped-v.packed+v.adjusted) }));
     },
     // สินค้าที่ยังไม่มีออเดอร์จริงในแอพผลิต — ลงยอดยกมาอิสระด้วยชื่อลูกค้า+รหัสของตัวเอง ไม่ผูกกับ orderId เลย
     freeFinStock(adjustments){
@@ -953,7 +958,7 @@ window.WPDAUTH = {
   /* ---------- STATE ---------- */
   let S = { fiberReceipts:[], fiberTh:{}, baleUsage:[], fabricReceipts:[], cuts:[], cutBatches:[], sewSent:[], sewReturns:[], waste:[], prodTypeTh:{},
             sackReceipts:[], gasReceipts:[], shipments:[], deliveries:[], finAdjustments:[] };
-  let PROD = { orders:[], wd:[], fabricWd:[], bagWd:[], gasSwaps:[], line:[] };
+  let PROD = { orders:[], wd:[], fabricWd:[], bagWd:[], gasSwaps:[], line:[], sheetWd:[] };
   let current='fiber', lastHash='';
 
   const hasStore = !!(window.storage && window.storage.get && window.storage.set);
@@ -1014,6 +1019,7 @@ window.WPDAUTH = {
     S.shipments=Pn.shipments||[]; S.deliveries=Pn.deliveries||[]; S.finAdjustments=Pn.finAdjustments||[];
     const A=parse(ord,{orders:[]}), B=parse(fd,{wd:[]}), C=parse(ln,{line:[]});
     PROD.orders=A.orders||[]; PROD.wd=B.wd||[]; PROD.fabricWd=B.fabricWd||[]; PROD.bagWd=B.bagWd||[]; PROD.gasSwaps=B.gasSwaps||[]; PROD.line=C.line||[];
+    PROD.sheetWd=B.sheetWd||[];
     return hash;
   }
 
@@ -2217,10 +2223,19 @@ window.WPDAUTH = {
     rGas(); toast('บันทึกรับเข้าถังแก๊ส '+qty+' ถัง — เริ่มที่ #'+start);
   };
 
+  /* บรรทัดบอกว่าของที่เบิกไปแพ็คต่อ ไปเข้างานไหนบ้าง */
+  function sheetOutLine(srcOrderId){
+    const rows=(PROD.sheetWd||[]).filter(w=>w.srcOrderId===srcOrderId);
+    if(!rows.length) return '';
+    const by={};
+    rows.forEach(w=>{ by[w.orderId]=r2((by[w.orderId]||0)+(+w.qty||0)); });
+    return '↳ ' + Object.entries(by).map(([oid,q])=>esc(orderLabel(oid))+' '+q+' แพ็ค').join(' · ');
+  }
+
   /* ---------- 4. FINISHED GOODS ---------- */
   function rFin(){
     const produced=producedByOrder();
-    const stock=CALC.finStock(produced, S.shipments, S.finAdjustments);
+    const stock=CALC.finStock(produced, S.shipments, S.finAdjustments, PROD.sheetWd);
     stock.sort((a,b)=>orderLabel(a.orderId).localeCompare(orderLabel(b.orderId),'th'));
     const freeStock=CALC.freeFinStock(S.finAdjustments);
     freeStock.sort((a,b)=>a.freeLabel.localeCompare(b.freeLabel,'th'));
@@ -2228,7 +2243,9 @@ window.WPDAUTH = {
     let cardsHtml=stock.length?stock.map(s=>{ const o=orderById(s.orderId);
       return '<div class="scard" data-fincard="'+esc(s.orderId)+'" style="cursor:pointer;"><div class="nm">'+esc(orderLabel(s.orderId))+(o?' <span class="bdg ok">'+esc(o.productType||'ใย')+'</span>':'')+'</div>'+
       '<div class="n">'+s.stock+' <span style="font-size:13px;color:#ffffff;">แพ็ค</span></div><div class="l">ผลิตได้ '+s.produced+' · ส่งออกแล้ว '+s.shipped+' แพ็ค'+
+      (s.packed?' · <b style="color:var(--accent2)">เบิกไปแพ็คต่อ '+s.packed+' แพ็ค</b>':'')+
       (s.adjusted?' · ปรับยอด '+(s.adjusted>0?'+':'')+s.adjusted+' แพ็ค':'')+' · แตะดูรายละเอียด ▾</div>'+
+      (s.packed?'<div class="l" style="color:var(--muted)">'+sheetOutLine(s.orderId)+'</div>':'')+
       '<button class="ed" style="margin-top:6px;" data-finadj="'+s.orderId+'">ปรับยอดคงเหลือ</button></div>'; }).join(''):'';
     cardsHtml += freeStock.length?freeStock.map(s=>
       '<div class="scard"><div class="nm">'+esc(s.freeLabel)+' <span class="bdg warn">ไม่มีออเดอร์</span></div>'+
@@ -2327,7 +2344,7 @@ window.WPDAUTH = {
     const orderId=$('obFinSel').value;
     if(!orderId){ toast('เลือกออเดอร์ก่อน'); return; }
     if(isNaN(target)){ toast('กรอกจำนวนแพ็ค'); return; }
-    const stock=CALC.finStock(producedByOrder(), S.shipments, S.finAdjustments);
+    const stock=CALC.finStock(producedByOrder(), S.shipments, S.finAdjustments, PROD.sheetWd);
     const cur=stock.find(x=>x.orderId===orderId);
     const curStock=cur?cur.stock:0;
     const delta=r2(target-curStock);
@@ -2348,7 +2365,7 @@ window.WPDAUTH = {
   function rShip(){
     if(!$('dpDate').value) $('dpDate').value=todayStr();
     if(!$('dpOrdSel').dataset.init){
-      const stock=CALC.finStock(producedByOrder(),S.shipments,S.finAdjustments);
+      const stock=CALC.finStock(producedByOrder(),S.shipments,S.finAdjustments,PROD.sheetWd);
       $('dpOrdSel').innerHTML=stock.filter(s=>s.stock>0).map(s=>'<option value="'+s.orderId+'">'+esc(orderLabel(s.orderId))+' (เหลือ '+s.stock+' แพ็ค)</option>').join('');
       $('dpOrdSel').dataset.init='1';
       $('dpOrdSel').onchange=refreshDpDateOptions;
@@ -2461,7 +2478,7 @@ window.WPDAUTH = {
   /* ---------- 6. SUMMARY / EXPORT / CLEAR ---------- */
   function rSum(){
     const rawS=CALC.rawStock(S.fiberReceipts,PROD.wd);
-    const finS=CALC.finStock(producedByOrder(),S.shipments,S.finAdjustments);
+    const finS=CALC.finStock(producedByOrder(),S.shipments,S.finAdjustments,PROD.sheetWd);
     const sackStatus=CALC.sackStatus(S.sackReceipts,PROD.bagWd);
     const zipS=CALC.bagAggregate(sackStatus,'zip');
     const packS=CALC.bagAggregate(sackStatus,'pack');

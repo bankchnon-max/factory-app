@@ -694,8 +694,22 @@ window.WPDAUTH = {
       return h>0 ? r2(sum/h) : 0;
     },
 
+    /* ════ งานปิกนิก: ใยแผ่นเข้ามาเป็นวัตถุดิบ "ในราคาต้นทุน" ไม่ใช่ราคาขาย ════
+       ต้นทุนต่อแผ่น = ต้นทุนรวมของงานที่ผลิตแผ่นนั้น ÷ จำนวนแผ่นที่ทำได้
+       กันวนไม่รู้จบ: งานที่เอาแผ่นมาใช้ต้องไม่ใช่งานปิกนิกซ้อนกันเอง */
+    sheetCostPerPiece(ctx, srcOrderId, depth){
+      if((depth||0)>2) return { baht:0, src:'none' };
+      const src=(ctx.PROD.orders||[]).find(o=>o.id===srcOrderId);
+      if(!src) return { baht:0, src:'none' };
+      const c=COST.jobCost(ctx, srcOrderId, (depth||0)+1);
+      if(!c.packs) return { baht:0, src:'noProd' };
+      /* ใยแผ่น 1 แพ็ค = 1 แผ่น */
+      return { baht:r4(c.total/c.packs), src:'job', from:src.customer+' — '+src.code,
+               total:c.total, packs:c.packs, missing:c.missing.length };
+    },
+
     /* ═══ ต้นทุนจริงของงานหนึ่งงาน ═══ */
-    jobCost(ctx, orderId){
+    jobCost(ctx, orderId, depth){
       const S=ctx.S||{}, P=ctx.PROD||{}, K=ctx.KSET||{}, PRICE=ctx.PRICE||{};
       const order=(P.orders||[]).find(o=>o.id===orderId)||null;
       const lines=(P.line||[]).filter(l=>l.orderId===orderId);
@@ -718,6 +732,18 @@ window.WPDAUTH = {
         fiberKg=r3(fiberKg+kg); fiberBaht=r2(fiberBaht+kg*p.baht);
         if(p.src==='none') miss.push('ใย "'+u.fiberName+'" ยังไม่ได้ใส่ราคา');
         detail.push({cat:'ใย', what:u.fiberName+' เบอร์ '+u.lot, qty:kg+' กก.', unit:p.baht, baht:r2(kg*p.baht), src:p.src});
+      });
+
+      /* ---- ใยแผ่นที่เบิกมาแพ็ค (งานปิกนิก) ---- */
+      let sheetPcs=0, sheetBaht=0;
+      (P.sheetUse||[]).filter(u=>u.orderId===orderId).forEach(u=>{
+        const q=+u.qty||0; if(!q) return;
+        const sc=COST.sheetCostPerPiece(ctx, u.srcOrderId, depth||0);
+        sheetPcs=r3(sheetPcs+q); sheetBaht=r2(sheetBaht+q*sc.baht);
+        if(sc.src==='none') miss.push('ใยแผ่นที่เบิกมาแพ็ค ไม่รู้ว่ามาจากงานไหน');
+        else if(sc.src==='noProd') miss.push('งานใยแผ่นต้นทางยังไม่มีบันทึกการผลิต — คิดต้นทุนต่อแผ่นไม่ได้');
+        else if(sc.missing) miss.push('งานใยแผ่นต้นทาง "'+sc.from+'" ยังใส่ราคาไม่ครบ ต้นทุนแผ่นจึงต่ำกว่าจริง');
+        detail.push({cat:'ใยแผ่น', what:(sc.from||'ใยแผ่น'), qty:q+' แผ่น', unit:sc.baht, baht:r2(q*sc.baht), src:sc.src});
       });
 
       /* ---- ผ้า ---- */
@@ -793,10 +819,11 @@ window.WPDAUTH = {
       if(fixed) detail.push({cat:'ค่าคงที่', what:'เฉลี่ยตามชั่วโมงเดินเครื่อง', qty:hours+' ชม.', unit:fixedRate, baht:fixed, src:'set'});
       if(!hpm && (K.fixed||[]).length) miss.push('ยังไม่รู้ชั่วโมงเดินเครื่องต่อเดือน — ค่าคงที่ยังไม่ถูกเฉลี่ยลงงาน');
 
-      const total=r2(fiberBaht+fabBaht+bagBaht+sewBaht+laborTime+laborPiece+gasBaht+elec+ship+fixed);
+      const total=r2(fiberBaht+sheetBaht+fabBaht+bagBaht+sewBaht+laborTime+laborPiece+gasBaht+elec+ship+fixed);
       return {
         orderId, order, packs, pieces, hours, span, days,
         fiber:{kg:fiberKg, baht:fiberBaht, from:fiberFrom},
+        sheet:{pieces:sheetPcs, baht:sheetBaht},
         fabric:{pieces:fabPieces, baht:fabBaht},
         bag:{zip:zipPcs, pack:packPcs, baht:bagBaht},
         sew:{pieces:sewPieces, baht:sewBaht},
@@ -853,7 +880,7 @@ window.WPDAUTH = {
      STATE
      ═══════════════════════════════════════════════════════════════ */
   let S = { fiberReceipts:[], fabricReceipts:[], cutBatches:[], sackReceipts:[], gasReceipts:[] };
-  let PROD = { orders:[], wd:[], use:[], fabricWd:[], bagWd:[], bagUse:[], gasSwaps:[], line:[] };
+  let PROD = { orders:[], wd:[], use:[], fabricWd:[], bagWd:[], bagUse:[], gasSwaps:[], line:[], sheetWd:[], sheetUse:[] };
   let KSET = { sewPerPiece:0, sewBySize:{}, laborDaily:0, laborHoursPerDay:8, laborPerPiece:0,
                elecPerHour:0, shipPerPack:0, fixed:[], hoursOverride:0, marginPct:20, vatPct:0 };
   let PRICE = { fiber:{}, fabric:{}, zip:{}, pack:{}, gas:0 };
@@ -911,6 +938,7 @@ window.WPDAUTH = {
     PROD.orders=A.orders||[];
     PROD.wd=B.wd||[]; PROD.use=B.use||[]; PROD.fabricWd=B.fabricWd||[]; PROD.bagWd=B.bagWd||[];
     PROD.bagUse=B.bagUse||[]; PROD.gasSwaps=B.gasSwaps||[];
+    PROD.sheetWd=B.sheetWd||[]; PROD.sheetUse=B.sheetUse||[];
     PROD.line=C.line||[];
     const K=parse(st,null);
     if(K && typeof K==='object'){ KSET=Object.assign(KSET,K); KSET.sewBySize=K.sewBySize||{}; KSET.fixed=K.fixed||[]; }
@@ -959,9 +987,10 @@ window.WPDAUTH = {
   function ctx(){ return { S, PROD, PRICE, KSET:Object.assign({}, KSET, {_hoursPerMonth:hoursPerMonthNow()}) }; }
   const SRCTXT = { lot:'ราคาก้อนนั้น', roll:'ราคาม้วนนั้น', sack:'ราคากระสอบนั้น',
                    std:'ราคามาตรฐาน', set:'ค่าที่ตั้งไว้',
-                   none:'ยังไม่ได้ใส่ราคา', noCut:'ไม่รู้จำนวนที่ตัดได้', noSack:'ไม่รู้จำนวนใบ/กระสอบ' };
+                   none:'ยังไม่ได้ใส่ราคา', noCut:'ไม่รู้จำนวนที่ตัดได้', noSack:'ไม่รู้จำนวนใบ/กระสอบ',
+                   job:'ต้นทุนจริงของงานที่ผลิตแผ่นนั้น', noProd:'งานต้นทางยังไม่มีบันทึกผลิต' };
   function srcBadge(s){
-    if(s==='none'||s==='noCut'||s==='noSack') return '<span class="bdg bad">'+(SRCTXT[s]||s)+'</span>';
+    if(s==='none'||s==='noCut'||s==='noSack'||s==='noProd') return '<span class="bdg bad">'+(SRCTXT[s]||s)+'</span>';
     if(s==='std') return '<span class="bdg warn">'+SRCTXT[s]+'</span>';
     return '<span class="bdg ok">'+(SRCTXT[s]||s)+'</span>';
   }
@@ -1200,6 +1229,7 @@ window.WPDAUTH = {
 
     const rows=[
       ['ใย', c.fiber.kg+' กก.', c.fiber.baht],
+      ['ใยแผ่นที่เอามาแพ็ค', c.sheet.pieces+' แผ่น', c.sheet.baht],
       ['ผ้าปลอก', c.fabric.pieces+' ชิ้น', c.fabric.baht],
       ['ถุง', (c.bag.zip+c.bag.pack)+' ใบ', c.bag.baht],
       ['ค่าจ้างเย็บ', c.sew.pieces+' ชิ้น', c.sew.baht],
